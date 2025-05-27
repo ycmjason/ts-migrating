@@ -1,0 +1,70 @@
+{
+	"name": "ts-migrating",
+	"version": "1.0.0",
+	"description": "Progressively Upgrade `tsconfigs.json`",
+	"author": "Jason Yu <me@ycmjason.com>",
+	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/ycmjason/ts-migrating.git"
+	},
+	"homepage": "https://github.com/ycmjason/ts-migrating#readme",
+	"bugs": {
+		"url": "https://github.com/ycmjason/ts-migrating/issues"
+	},
+	"keywords": [
+		"typescript",
+		"migration",
+		"cli",
+		"plugin"
+	],
+	"main": "./dist/plugin/mod.js",
+	"bin": "./dist/cli/main.js",
+	"exports": {
+		".": {
+			"import": "./dist/plugin/mod.mjs",
+			"require": "./dist/plugin/mod.js"
+		},
+		"./cli": {
+			"import": "./dist/cli/main.mjs",
+			"require": "./dist/cli/main.js"
+		},
+		"./api": {
+			"import": "./dist/api/mod.mjs",
+			"require": "./dist/api/mod.js"
+		}
+	},
+	"files": [
+		"dist",
+		"README.md",
+		"LICENSE",
+		"biome.config.json"
+	],
+	"scripts": {
+		"test": "vitest run",
+		"build": "tsup src/cli/main.ts src/api/mod.ts src/plugin/mod.ts --sourcemap --format esm,cjs --clean --cjsInterop --splitting",
+		"build:watch": "yarn build --watch",
+		"typecheck": "tsc",
+		"check": "biome check .",
+		"check:fix": "yarn check --write"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "^1.9.4",
+		"@types/node": "^22.15.21",
+		"ts-migrating": "link:.",
+		"tsup": "^8.5.0",
+		"typescript": "^5.8.3",
+		"vitest": "^3.1.4"
+	},
+	"peerDependencies": {
+		"typescript": "^5.0.0"
+	},
+	"engines": {
+		"node": ">=18.0.0"
+	},
+	"packageManager": "yarn@4.9.1",
+	"dependencies": {
+		"@stricli/core": "^1.1.2",
+		"tinyglobby": "^0.2.14"
+	}
+}
