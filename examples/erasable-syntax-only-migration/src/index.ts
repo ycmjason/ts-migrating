@@ -5,7 +5,7 @@ enum FRUITS {
   KIWI,
 }
 
-// @ts-migrating - ✅ suppressing the error next line
+// @ts-migrating - ✅ the next line is type-checked with `erasableSyntaxOnly` disabled!
 enum Type {
   A,
   B,

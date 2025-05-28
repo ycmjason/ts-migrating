@@ -2,13 +2,22 @@
 
 🚀 **TypeScript keeps evolving — and your `tsconfig` should too.**
 
-This plugin lets you enable your desired `compilerOptions` (e.g. `strict`, `noUncheckedIndexedAccess`, `erasableSyntaxOnly`) across your entire codebase, while selectively disabling problematic lines.
+This plugin lets you upgrade to your desired `compilerOptions` (e.g. `strict`, `noUncheckedIndexedAccess`, `erasableSyntaxOnly`) across your entire codebase, while letting problematic lines fall back to the old `compilerOptions`.
 
 Upgrading `tsconfig` often breaks existing code, and fixing all errors at once is unrealistic.
 
 **`@ts-migrating`** helps your team migrate to a desired `tsconfig` gradually and safely.
 
 > I chose `@ts-migrating` (rather than `@ts-migration`) to better reflect the plugin’s progressive and incremental philosophy.
+
+## 🙋‍♀️ Why not `@ts-expect-error` / `@ts-ignore`?
+
+Using `@ts-expect-error` or `@ts-ignore` to silence TypeScript errors can work in the short term — but they come with trade-offs:
+
+- They suppress all errors on the line, not just those introduced by the new `compilerOptions`. This can hide unrelated issues and introduce technical debt.
+- There are cases where you actually want to use `@ts-expect-error` and `@ts-ignore`. Mixing their real usages with `tsconfig` migration is 🤮.
+
+This plugin takes a different approach: it lets you apply the desired `compilerOptions` globally while allowing them to be reverted line-by-line. This keeps your code clean, and your intent clear — enabling a safer and more maintainable upgrade path.
 
 ## 🤖 How does this work?
 
@@ -23,7 +32,7 @@ The philosophy behind the plugin follows three simple steps:
 
 2. 🔧 **Reduction**
 
-   * Lines marked with `@ts-migrating` will still be typechecked with your original `tsconfig`. Ensuring type-safety throughout.
+   * Lines marked with `@ts-migrating` will be typechecked with your original `tsconfig`. Ensuring type-safety throughout.
    * Developers can progressively fix these lines, reducing violations over time.
 
 3. ✅ **Migration**

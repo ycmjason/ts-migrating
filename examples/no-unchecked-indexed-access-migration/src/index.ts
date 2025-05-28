@@ -5,5 +5,5 @@ const plusOne = (xs: number[]) => {
 
 const plusTwo = (xs: number[]) => {
   // @ts-migrating
-  return xs[0] + 1; // ✅ - error ignored!
+  return xs[0] + 1; // ✅ - line reverted to original tsconfig, i.e. with `noUncheckedIndexedAccess` disabled!
 };
