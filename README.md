@@ -50,13 +50,13 @@ The philosophy behind the plugin follows three simple steps:
 
 ## 🎪 Examples
 
+* [Migrating to `strict`](./examples/strict-mode-migration/src/index.ts)
 * [Migrating to `noUncheckedIndexedAccess`](./examples/no-unchecked-indexed-access-migration/src/index.ts):
 
   | Without `@ts-migrating` | With `@ts-migrating` |
   | ----------------------- | -------------------- |
   | ![Migrating to noUncheckedIndexedAccess](./assets/ts-migrating-no-unchecked-indexed-access.png)  | ![Migrating to noUncheckedIndexedAccess marked](./assets/ts-migrating-no-unchecked-indexed-access-marked.png)  |
 
-* [Migrating to `noUncheckedIndexAccess`](./examples/erasable-syntax-only-migration/src/index.ts)
 * [Migrating to `erasableSyntaxOnly`](./examples/erasable-syntax-only-migration/src/index.ts)
 
 ## 📦 Install and Setup
@@ -121,7 +121,9 @@ In your existing `tsconfig.json`, add the plugin:
 
 ## API
 
-You can use this project programmatically. This can be useful if you would like to have some custom integration, for example reporting error counts to dashboards etc. Currently there are only 2 functions exposed, [`getSemanticDiagnosticsForFile`](./src/api/getSemanticDiagnostics.ts) and [`isPluginDiagnostic`](./src/api/isPluginDiagnostic.ts). You can import them via `ts-migrating/api`, e.g.
+You can use this project programmatically. This can be useful if you would like to have custom integrations, for example: reporting error counts to dashboard etc.
+
+Currently there are only 2 functions exposed, [`getSemanticDiagnosticsForFile`](./src/api/getSemanticDiagnostics.ts) and [`isPluginDiagnostic`](./src/api/isPluginDiagnostic.ts). You can import them via `ts-migrating/api`, e.g.
 
 ```ts
 import { getSemanticDiagnosticsForFile, isPluginDiagnostic } from 'ts-migrating/api';

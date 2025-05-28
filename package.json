@@ -1,6 +1,6 @@
 {
 	"name": "ts-migrating",
-	"version": "1.0.1",
+	"version": "1.0.2",
 	"description": "Progressively Upgrade `tsconfigs.json`",
 	"author": "Jason Yu <me@ycmjason.com>",
 	"license": "MIT",
