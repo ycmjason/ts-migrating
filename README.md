@@ -2,7 +2,9 @@
 
 🚀 **TypeScript keeps evolving — and your `tsconfig` should too.**
 
-But upgrading often breaks existing code, and fixing all errors at once is unrealistic.
+This plugin lets you enable your desired `compilerOptions` (e.g. `strict`, `noUncheckedIndexedAccess`, `erasableSyntaxOnly`) across your entire codebase, while selectively disabling problematic lines.
+
+Upgrading `tsconfig` often breaks existing code, and fixing all errors at once is unrealistic.
 
 **`@ts-migrating`** helps your team migrate to a desired `tsconfig` gradually and safely.
 
@@ -21,7 +23,7 @@ The philosophy behind the plugin follows three simple steps:
 
 2. 🔧 **Reduction**
 
-   * Lines marked with `@ts-migrating` are temporarily suppressed.
+   * Lines marked with `@ts-migrating` will still be typechecked with your original `tsconfig`. Ensuring type-safety throughout.
    * Developers can progressively fix these lines, reducing violations over time.
 
 3. ✅ **Migration**
@@ -36,7 +38,7 @@ The philosophy behind the plugin follows three simple steps:
 1. 🔌 **[TypeScript Language Service Plugin](https://github.com/microsoft/TypeScript/wiki/Writing-a-Language-Service-Plugin)**
 
    * Enables IDEs to show errors from the `tsconfig` you're migrating to.
-   * Suppresses errors on lines marked with `@ts-migrating`.
+   * Revert lines marked with `@ts-migrating` to be type-checked with your original `tsconfig`.
 
 2. 🖥️ **Standalone CLI: `ts-migrating`**
 
