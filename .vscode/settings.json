@@ -3,7 +3,6 @@
   "typescript.tsdk": "node_modules/typescript/lib",
   "search.exclude": {
     "node_modules": true,
-    "dist": true,
-    ".yarn": true
+    "dist": true
   }
 }

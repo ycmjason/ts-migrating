@@ -43,15 +43,15 @@
 	"scripts": {
 		"test": "vitest run",
 		"build": "tsup src/cli/main.ts src/api/mod.ts src/plugin/mod.ts --sourcemap --format esm,cjs --clean --cjsInterop --splitting",
-		"build:watch": "yarn build --watch",
+		"build:watch": "pnpm build --watch",
 		"typecheck": "tsc",
 		"check": "biome check .",
-		"check:fix": "yarn check --write"
+		"check:fix": "pnpm check --write"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "^1.9.4",
-		"@types/node": "^22.15.21",
-		"ts-migrating": "link:.",
+		"@types/node": "^22.15.24",
+		"ts-migrating": "link:",
 		"tsup": "^8.5.0",
 		"typescript": "^5.8.3",
 		"vitest": "^3.1.4"
@@ -62,9 +62,9 @@
 	"engines": {
 		"node": ">=18.0.0"
 	},
-	"packageManager": "yarn@4.9.1",
 	"dependencies": {
 		"@stricli/core": "^1.1.2",
 		"tinyglobby": "^0.2.14"
-	}
+	},
+	"packageManager": "pnpm@10.11.0+sha512.6540583f41cc5f628eb3d9773ecee802f4f9ef9923cc45b69890fb47991d4b092964694ec3a4f738a420c918a333062c8b925d312f42e4f0c263eb603551f977"
 }
