@@ -44,9 +44,10 @@
 		"test": "vitest run",
 		"build": "tsup src/cli/main.ts src/api/mod.ts src/plugin/mod.ts --sourcemap --format esm,cjs --clean --cjsInterop --splitting",
 		"build:watch": "pnpm build --watch",
-		"typecheck": "tsc",
-		"check": "biome check .",
-		"check:fix": "pnpm check --write"
+		"check": "pnpm check:lint && pnpm check:type && pnpm test",
+		"check:type": "tsc",
+		"check:lint": "biome check .",
+		"check:lint:fix": "pnpm check:lint --write"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "^1.9.4",

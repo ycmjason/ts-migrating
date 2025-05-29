@@ -28,10 +28,10 @@ jobs:
         run: pnpm build
 
       - name: Lint and Formating
-        run: pnpm check
+        run: pnpm check:lint
 
-      - name: Typecheck
-        run: pnpm typecheck
+      - name: Type check
+        run: pnpm check:type
 
       - name: Test
         run: pnpm test
