@@ -1,7 +1,8 @@
 {
   "compilerOptions": {
     "target": "ESNext",
-    "module": "CommonJS",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
     "strict": true,
@@ -11,5 +12,5 @@
     "resolveJsonModule": true,
     "noEmit": true
   },
-  "include": ["./src"]
+  "include": ["./src", "./vitest.config.ts"]
 }

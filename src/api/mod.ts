@@ -1,4 +1,3 @@
-import { getSemanticDiagnosticsForFile } from './getSemanticDiagnostics';
-import { isPluginDiagnostic } from './isPluginDiagnostic';
-
-export { getSemanticDiagnosticsForFile, isPluginDiagnostic };
+export { getSemanticDiagnosticsForFile } from './getSemanticDiagnostics';
+export { getTSInfoForFile } from './getTSInfoForFile';
+export { isPluginDiagnostic } from './isPluginDiagnostic';

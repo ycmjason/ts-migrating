@@ -163,38 +163,39 @@ enum FRUITS {
   `);
 });
 
-it('should ignore ts files without any tsconfig that includes them', async () => {
-  const tmpDir = await setupTmpDir({
-    './tsconfig.json': JSON.stringify({
-      compilerOptions: {
-        target: 'ES2020',
-        module: 'commonjs',
-        outDir: './dist',
-        rootDir: './src',
-        strict: false,
-        esModuleInterop: true,
-        forceConsistentCasingInFileNames: true,
-        plugins: [
-          {
-            // ts will look up from the node_modules that the ts server is running from. e.g. ../../node_modules/ts-migrating
-            // this is why we add `ts-migrating` as dev dependency of itself.
-            name: 'ts-migrating',
-            compilerOptions: {
-              erasableSyntaxOnly: true,
+describe('ignoring files', () => {
+  it('should ignore ts files without any tsconfig that includes them', async () => {
+    const tmpDir = await setupTmpDir({
+      './tsconfig.json': JSON.stringify({
+        compilerOptions: {
+          target: 'ES2020',
+          module: 'commonjs',
+          outDir: './dist',
+          rootDir: './src',
+          strict: false,
+          esModuleInterop: true,
+          forceConsistentCasingInFileNames: true,
+          plugins: [
+            {
+              // ts will look up from the node_modules that the ts server is running from. e.g. ../../node_modules/ts-migrating
+              // this is why we add `ts-migrating` as dev dependency of itself.
+              name: 'ts-migrating',
+              compilerOptions: {
+                erasableSyntaxOnly: true,
+              },
             },
-          },
+          ],
+          skipLibCheck: true,
+        },
+        include: ['.'],
+        exclude: [
+          'node_modules',
+          'dist',
+          // excluding `ignored` directory!!!
+          'ignored',
         ],
-        skipLibCheck: true,
-      },
-      include: ['.'],
-      exclude: [
-        'node_modules',
-        'dist',
-        // excluding `ignored` directory!!!
-        'ignored',
-      ],
-    }),
-    './src/index.ts': `// @ts-migrating
+      }),
+      './src/index.ts': `// @ts-migrating
 enum FRUITS {
   APPLE,
   BANANA,
@@ -202,9 +203,48 @@ enum FRUITS {
   KIWI,
 }
 `,
-    './ignored/index.ts': 'laksdjflkj oiwejflaskdjf',
+      './ignored/index.ts': 'laksdjflkj oiwejflaskdjf',
+    });
+
+    const diagnostics = getSemanticDiagnosticsForFile(join(tmpDir, 'ignored/index.ts'));
+    expect(diagnostics).toHaveLength(0);
   });
 
-  const diagnostics = getSemanticDiagnosticsForFile(join(tmpDir, 'ignored/index.ts'));
-  expect(diagnostics).toHaveLength(0);
+  it('should ignore projects without `ts-migrating` plugin', async () => {
+    const tmpDir = await setupTmpDir({
+      './tsconfig.json': JSON.stringify({
+        compilerOptions: {
+          target: 'ES2020',
+          module: 'commonjs',
+          outDir: './dist',
+          rootDir: './src',
+          strict: false,
+          esModuleInterop: true,
+          forceConsistentCasingInFileNames: true,
+          plugins: [
+            // no plugin!
+          ],
+          skipLibCheck: true,
+        },
+        include: ['.'],
+        exclude: [
+          'node_modules',
+          'dist',
+          // excluding `ignored` directory!!!
+          'ignored',
+        ],
+      }),
+      './src/index.ts': `// @ts-migrating
+enum FRUITS {
+  APPLE,
+  BANANA,
+  // @ts-migrating
+  KIWI,
+}
+`,
+    });
+
+    const diagnostics = getSemanticDiagnosticsForFile(join(tmpDir, 'src/index.ts'));
+    expect(diagnostics).toHaveLength(0);
+  });
 });

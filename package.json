@@ -1,6 +1,6 @@
 {
 	"name": "ts-migrating",
-	"version": "1.1.0",
+	"version": "1.2.0",
 	"description": "Progressively Upgrade `tsconfigs.json`",
 	"author": "Jason Yu <me@ycmjason.com>",
 	"license": "MIT",
@@ -41,13 +41,14 @@
 		"biome.config.json"
 	],
 	"scripts": {
-		"test": "vitest run",
 		"build": "tsup src/cli/main.ts src/api/mod.ts src/plugin/mod.ts --sourcemap --format esm,cjs --clean --cjsInterop --splitting",
 		"build:watch": "pnpm build --watch",
 		"check": "pnpm check:lint && pnpm check:type && pnpm test",
-		"check:type": "tsc",
 		"check:lint": "biome check .",
-		"check:lint:fix": "pnpm check:lint --write"
+		"check:lint:fix": "pnpm check:lint --write",
+		"check:type": "tsc",
+		"test": "vitest run",
+		"test:watch": "vitest"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "^1.9.4",

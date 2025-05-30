@@ -1,42 +1,64 @@
 import ts from 'typescript/lib/tsserverlibrary';
 import { getSemanticDiagnosticsForFile } from '../../api/getSemanticDiagnostics';
 import { isPluginDiagnostic } from '../../api/isPluginDiagnostic';
-import { expandTSFilePaths } from '../expandTSFilePaths';
+import { getPluginEnabledTSFilePaths } from '../ops/getPluginEnabledTSFilePaths';
 
-export const check = async ({ verbose }: { verbose: boolean }, ...inputPaths: string[]) => {
-  const files = expandTSFilePaths(inputPaths);
+export const check = async (
+  { verbose, allTypeErrors: isCheckingAllTypeErrors }: { verbose: boolean; allTypeErrors: boolean },
+  ...inputPaths: string[]
+) => {
+  const pluginEnabledFiles = getPluginEnabledTSFilePaths(inputPaths, { verbose });
+
   console.log(
-    `🔎 Type checking ${files.length} file${files.length === 1 ? '' : 's'}...${!verbose ? ' (use -v or --verbose to list all files)' : ''}`,
+    `⏳ Checking for ${isCheckingAllTypeErrors ? 'all TypeScript errors' : '[ts-migrating] plugin errors only'}...`,
   );
-  if (verbose) {
-    console.log('Files to check:');
-    console.log(files.map(file => `  • ${file}`).join('\n'));
-  }
 
-  let diagnosticCount = 0;
+  console.log();
+
+  const allDiagnostics: ts.Diagnostic[] = [];
 
   console.time('Type checking duration');
-  for (const file of files) {
+  for (const file of pluginEnabledFiles) {
     const diagnostics = getSemanticDiagnosticsForFile(file);
-    diagnosticCount += diagnostics.filter(d => isPluginDiagnostic(d)).length;
+    allDiagnostics.push(...diagnostics);
 
     if (diagnostics.length > 0) {
       console.log(
-        ts.formatDiagnosticsWithColorAndContext(diagnostics, {
-          getCanonicalFileName: fileName => fileName,
-          getCurrentDirectory: () => process.cwd(),
-          getNewLine: () => ts.sys.newLine,
-        }),
+        ts.formatDiagnosticsWithColorAndContext(
+          diagnostics.filter(d => {
+            if (isCheckingAllTypeErrors) return true;
+            return isPluginDiagnostic(d);
+          }),
+          {
+            getCanonicalFileName: fileName => fileName,
+            getCurrentDirectory: () => process.cwd(),
+            getNewLine: () => ts.sys.newLine,
+          },
+        ),
       );
     }
   }
   console.timeEnd('Type checking duration');
 
-  if (diagnosticCount > 0) {
-    console.error(`❌ ${diagnosticCount} unmarked error${diagnosticCount === 1 ? '' : 's'} found.`);
-    process.exit(1);
-  } else {
-    console.log('✅ No unmarked errors found.');
-    process.exit(0);
+  if (isCheckingAllTypeErrors) {
+    if (allDiagnostics.length > 0) {
+      console.error(
+        `❌ ${allDiagnostics.length} type error${allDiagnostics.length === 1 ? '' : 's'} found.`,
+      );
+    } else {
+      console.log('✅ No type errors found.');
+    }
   }
+
+  const pluginDiagnostics = allDiagnostics.filter(diagnostics => isPluginDiagnostic(diagnostics));
+
+  if (pluginDiagnostics.length > 0) {
+    console.error(
+      `❌ ${pluginDiagnostics.length} unmarked plugin error${pluginDiagnostics.length === 1 ? '' : 's'} found. Run \`npx ts-migrating annotate\` to automatically mark them!`,
+    );
+  } else {
+    console.log('✅ No unmarked plugin errors found.');
+  }
+
+  process.exit(Math.min((isCheckingAllTypeErrors ? allDiagnostics : pluginDiagnostics).length, 1));
 };

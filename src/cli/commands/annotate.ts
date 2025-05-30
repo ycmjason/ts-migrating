@@ -5,17 +5,10 @@ import { getLineNumberGivenPosition } from '../../api/utils/getLineNumberGivenPo
 import { DIRECTIVE } from '../../plugin/constants/DIRECTIVE';
 import { UNUSED_DIRECTIVE_DIAGNOSTIC_CODE } from '../../plugin/constants/UNUSED_DIRECTIVE_DIAGNOSTIC_CODE';
 import { ANNOTATE_WARNING } from '../constants/annotate-warning';
-import { expandTSFilePaths } from '../expandTSFilePaths';
+import { getPluginEnabledTSFilePaths } from '../ops/getPluginEnabledTSFilePaths';
 
 export const annotate = async ({ verbose }: { verbose: boolean }, ...inputPaths: string[]) => {
-  const files = expandTSFilePaths(inputPaths);
-  console.log(
-    `🔍 Annotating ${files.length} file${files.length === 1 ? '' : 's'}...${!verbose ? ' (use --verbose to see the list)' : ''}`,
-  );
-  if (verbose) {
-    console.log('Files to annotate:');
-    console.log(files.map(file => `  • ${file}`).join('\n'));
-  }
+  const files = getPluginEnabledTSFilePaths(inputPaths, { verbose });
 
   console.log(ANNOTATE_WARNING);
 
