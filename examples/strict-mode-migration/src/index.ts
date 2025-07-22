@@ -2,7 +2,6 @@ const greet = (name: string): void => {
   console.log(`Hello, ${name}`);
 };
 
-// @ts-migrating
 greet(undefined);
 //    ^^^^^^^^^ --ERROR--> "[ts-migrating] Argument of type 'undefined' is not assignable to parameter of type 'string'."
 

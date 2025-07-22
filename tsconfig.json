@@ -10,7 +10,8 @@
     "noUncheckedIndexedAccess": true,
     "skipLibCheck": true,
     "resolveJsonModule": true,
-    "noEmit": true
+    "noEmit": true,
+    "types": ["vitest/importMeta"]
   },
-  "include": ["./src", "./vitest.config.ts"]
+  "include": ["./src", "./vitest.config.ts", "./tsup.config.ts"]
 }
