@@ -52,11 +52,11 @@
 	},
 	"devDependencies": {
 		"@biomejs/biome": "^1.9.4",
-		"@types/node": "^22.15.24",
+		"@types/node": "^22.16.5",
 		"ts-migrating": "link:",
 		"tsup": "^8.5.0",
 		"typescript": "^5.8.3",
-		"vitest": "^3.1.4"
+		"vitest": "^3.2.4"
 	},
 	"peerDependencies": {
 		"typescript": "^5.0.0"
@@ -65,8 +65,8 @@
 		"node": ">=18.0.0"
 	},
 	"dependencies": {
-		"@stricli/core": "^1.1.2",
+		"@stricli/core": "^1.2.0",
 		"tinyglobby": "^0.2.14"
 	},
-	"packageManager": "pnpm@10.11.0+sha512.6540583f41cc5f628eb3d9773ecee802f4f9ef9923cc45b69890fb47991d4b092964694ec3a4f738a420c918a333062c8b925d312f42e4f0c263eb603551f977"
+	"packageManager": "pnpm@10.13.1+sha512.37ebf1a5c7a30d5fabe0c5df44ee8da4c965ca0c5af3dbab28c3a1681b70a256218d05c81c9c0dcf767ef6b8551eb5b960042b9ed4300c59242336377e01cfad"
 }
