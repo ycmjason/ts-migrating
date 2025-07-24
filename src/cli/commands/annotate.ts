@@ -190,6 +190,6 @@ export const annotate = async ({ verbose }: { verbose: boolean }, ...inputPaths:
   console.timeEnd('Annotation');
 
   console.log(
-    '✨ Annotation complete! Please run your formatter and linter to clean up the code. Manual review may still be required for some files.',
+    '✨ Annotation complete! Remember to run your formatter / linter, and potentially this command again to fully annotate all errors.',
   );
 };
