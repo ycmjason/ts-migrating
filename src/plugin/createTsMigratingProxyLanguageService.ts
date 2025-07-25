@@ -44,10 +44,12 @@ export const createTsMigratingProxyLanguageService = ({
 
         return [
           ...getUnmarkedDiagnostics(newlyIntroducedDiagnostics, {
+            sourceFile,
             directiveComments,
             getLineNumberByPosition,
           }),
           ...getUnusedDirectiveComments(directiveComments, {
+            sourceFile,
             newlyIntroducedDiagnostics,
             getLineNumberByPosition,
           }).map(({ position, descriptor }) => ({

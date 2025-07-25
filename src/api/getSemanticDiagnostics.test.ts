@@ -247,4 +247,44 @@ enum FRUITS {
     const diagnostics = getSemanticDiagnosticsForFile(join(tmpDir, 'src/index.ts'));
     expect(diagnostics).toHaveLength(0);
   });
+
+  it('should ignore comments below', async () => {
+    const tmpDir = await setupTmpDir({
+      './tsconfig.json': JSON.stringify({
+        compilerOptions: {
+          target: 'ES2020',
+          module: 'commonjs',
+          outDir: './dist',
+          rootDir: './src',
+          strict: false,
+          esModuleInterop: true,
+          forceConsistentCasingInFileNames: true,
+          plugins: [
+            {
+              // ts will look up from the node_modules that the ts server is running from. e.g. ../../node_modules/ts-migrating
+              // this is why we add `ts-migrating` as dev dependency of itself.
+              name: 'ts-migrating',
+              compilerOptions: {
+                erasableSyntaxOnly: true,
+              },
+            },
+          ],
+          skipLibCheck: true,
+        },
+        include: ['src'],
+        exclude: ['node_modules', 'dist'],
+      }),
+      './src/index.ts': `// @ts-migrating
+// whatever here
+enum FRUITS {
+  APPLE,
+  BANANA,
+  KIWI,
+}
+`,
+    });
+
+    const diagnostics = getSemanticDiagnosticsForFile(join(tmpDir, 'src/index.ts'));
+    expect(diagnostics).toHaveLength(0);
+  });
 });

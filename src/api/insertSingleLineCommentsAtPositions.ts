@@ -42,9 +42,10 @@ const getLineColumnPosition = (
 
 if (import.meta.vitest) {
   const { it, describe } = import.meta.vitest;
-  const ts = await import('typescript/lib/tsserverlibrary');
 
-  describe('getAbsolutePosition / getLineColumnPosition', () => {
+  describe('getAbsolutePosition / getLineColumnPosition', async () => {
+    const ts = await import('typescript/lib/tsserverlibrary');
+
     it('should return the absolute position and back', () => {
       const code = `const a = 'hi'
 const b = 'bye'
