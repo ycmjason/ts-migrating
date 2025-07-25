@@ -21,18 +21,18 @@ const annotateDiagnostics = (source: string, diagnostics: readonly ts.Diagnostic
 
 if (import.meta.vitest) {
   const { describe, it, expect } = import.meta.vitest;
-  const ts = await import('typescript/lib/tsserverlibrary');
 
-  const createDiagnosticAtPosition = (pos: number): ts.Diagnostic => ({
-    start: pos,
-    category: ts.DiagnosticCategory.Warning,
-    code: 0,
-    file: undefined,
-    length: undefined,
-    messageText: '',
-  });
+  describe('annotateDiagnostics', async () => {
+    const ts = await import('typescript/lib/tsserverlibrary');
 
-  describe('annotateDiagnostics', () => {
+    const createDiagnosticAtPosition = (pos: number): ts.Diagnostic => ({
+      start: pos,
+      category: ts.DiagnosticCategory.Warning,
+      code: 0,
+      file: undefined,
+      length: undefined,
+      messageText: '',
+    });
     it('should add @ts-migrating before the first line', () => {
       expect(
         annotateDiagnostics(`const a = 'hello';`, [createDiagnosticAtPosition(0)]),
