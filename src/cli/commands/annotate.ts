@@ -21,18 +21,19 @@ const annotateDiagnostics = (source: string, diagnostics: readonly ts.Diagnostic
 
 if (import.meta.vitest) {
   const { describe, it, expect } = import.meta.vitest;
-  const ts = await import('typescript/lib/tsserverlibrary');
 
-  const createDiagnosticAtPosition = (pos: number): ts.Diagnostic => ({
-    start: pos,
-    category: ts.DiagnosticCategory.Warning,
-    code: 0,
-    file: undefined,
-    length: undefined,
-    messageText: '',
-  });
+  describe('annotateDiagnostics', async () => {
+    const ts = await import('typescript/lib/tsserverlibrary');
 
-  describe('annotateDiagnostics', () => {
+    const createDiagnosticAtPosition = (pos: number): ts.Diagnostic => ({
+      start: pos,
+      category: ts.DiagnosticCategory.Warning,
+      code: 0,
+      file: undefined,
+      length: undefined,
+      messageText: '',
+    });
+
     it('should add @ts-migrating before the first line', () => {
       expect(
         annotateDiagnostics(`const a = 'hello';`, [createDiagnosticAtPosition(0)]),
@@ -64,8 +65,8 @@ if (import.meta.vitest) {
       `);
     });
 
-    describe('[jt]sx', () => {
-      it('should add @ts-migrating correctly for tsx one-liner', () => {
+    describe('jsx', () => {
+      it('should add @ts-migrating correctly for jsx one-liner', () => {
         const code = 'const a = <div a={hi}></div>;';
         expect(
           annotateDiagnostics(code, [createDiagnosticAtPosition(code.indexOf('hi'))]),
@@ -75,28 +76,83 @@ if (import.meta.vitest) {
         `);
       });
 
-      it('should add @ts-migrating correctly for tsx attributes', () => {
+      it('should add @ts-migrating correctly for jsx attributes', () => {
         const code = 'const a = <div\n  a={hi}>\n</div>;';
         expect(
           annotateDiagnostics(code, [createDiagnosticAtPosition(code.indexOf('hi'))]),
         ).toMatchInlineSnapshot(`
           "const a = <div
-            a={// @ts-migrating
-            hi}>
+            // @ts-migrating
+            a={hi}>
           </div>;"
         `);
       });
 
-      it('should add @ts-migrating correctly for tsx expressions', () => {
+      it('should add @ts-migrating correctly for jsx expressions', () => {
         const code = 'const a = <div>\n  {hi}\n</div>;';
         expect(
           annotateDiagnostics(code, [createDiagnosticAtPosition(code.indexOf('hi'))]),
         ).toMatchInlineSnapshot(`
-        "const a = <div>
-          {// @ts-migrating
-          hi}
-        </div>;"
-      `);
+          "const a = <div>
+            {/* @ts-migrating */}
+            {hi}
+          </div>;"
+        `);
+      });
+
+      it('should add @ts-migrating correctly for jsx fragment', () => {
+        const code = 'const a = <>\n  {hi}\n</>;';
+        expect(
+          annotateDiagnostics(code, [createDiagnosticAtPosition(code.indexOf('hi'))]),
+        ).toMatchInlineSnapshot(`
+          "const a = <>
+            {/* @ts-migrating */}
+            {hi}
+          </>;"
+        `);
+      });
+
+      it('should add @ts-migrating correctly for jsx expressions with attributes', () => {
+        const code = 'const a = <div\n  id="yo">\n<div>{hi}</div>\n</div>; const b = 3';
+        expect(
+          annotateDiagnostics(code, [
+            createDiagnosticAtPosition(code.indexOf('hi')),
+            createDiagnosticAtPosition(code.indexOf('yo')),
+          ]),
+        ).toMatchInlineSnapshot(`
+          "const a = <div
+            // @ts-migrating
+            id="yo">
+            {/* @ts-migrating */}
+          <div>{hi}</div>
+          </div>; const b = 3"
+        `);
+      });
+
+      it('should add @ts-migrating correctly for iife within jsx', () => {
+        const code = `const a = <Button>
+  {(() => { f(); })()}
+  {(() => {
+    g();
+  })()}
+</Button>
+`;
+        expect(
+          annotateDiagnostics(code, [
+            createDiagnosticAtPosition(code.indexOf('f')),
+            createDiagnosticAtPosition(code.indexOf('g')),
+          ]),
+        ).toMatchInlineSnapshot(`
+          "const a = <Button>
+            {/* @ts-migrating */}
+            {(() => { f(); })()}
+            {(() => {
+              // @ts-migrating
+              g();
+            })()}
+          </Button>
+          "
+        `);
       });
     });
 
@@ -106,9 +162,9 @@ if (import.meta.vitest) {
         expect(
           annotateDiagnostics(code, [createDiagnosticAtPosition(code.indexOf('A'))]),
         ).toMatchInlineSnapshot(`
-        "// @ts-migrating
-        enum A {}"
-      `);
+          "// @ts-migrating
+          enum A { }"
+        `);
       });
 
       it('should add @ts-migrating correctly for weird formatted enum', () => {
@@ -116,10 +172,10 @@ if (import.meta.vitest) {
         expect(
           annotateDiagnostics(code, [createDiagnosticAtPosition(code.indexOf('A'))]),
         ).toMatchInlineSnapshot(`
-        "enum
-        // @ts-migrating
-        A { }"
-      `);
+          "enum
+          // @ts-migrating
+          A { }"
+        `);
       });
     });
 
@@ -129,10 +185,10 @@ if (import.meta.vitest) {
         expect(
           annotateDiagnostics(code, [createDiagnosticAtPosition(code.indexOf('awesome'))]),
         ).toMatchInlineSnapshot(`
-        "const message = \`I am
-         freaking \${// @ts-migrating
-        awesome}.\`;"
-      `);
+          "const message = \`I am
+           freaking \${// @ts-migrating
+          awesome}.\`;"
+        `);
       });
 
       it('should add @ts-migrating correctly for string template with multiple errors', () => {
@@ -146,15 +202,303 @@ if (import.meta.vitest) {
             createDiagnosticAtPosition(code.indexOf('lovely')),
           ]),
         ).toMatchInlineSnapshot(`
-        "const message = \`I am
-         freaking \${// @ts-migrating
-        awesome}, \${cool}
-        , \${// @ts-migrating
-        fantastic}, 
-        \${// @ts-migrating
-        lovely}.\`;"
-      `);
+          "const message = \`I am
+           freaking \${// @ts-migrating
+          awesome}, \${cool}
+          , \${// @ts-migrating
+          fantastic}, 
+          \${// @ts-migrating
+          lovely}.\`;"
+        `);
       });
+
+      it('should add @ts-migrating correctly for naive lines after string template', () => {
+        const code = 'const x = `I am ${cool}\n${awesome}`;\nf();\ng();';
+        expect(
+          annotateDiagnostics(code, [
+            createDiagnosticAtPosition(code.indexOf('cool')),
+            createDiagnosticAtPosition(code.indexOf('awesome')),
+            createDiagnosticAtPosition(code.indexOf('f')),
+            createDiagnosticAtPosition(code.indexOf('g')),
+          ]),
+        ).toMatchInlineSnapshot(`
+          "// @ts-migrating
+          const x = \`I am \${cool}
+          \${// @ts-migrating
+          awesome}\`;
+          // @ts-migrating
+          f();
+          // @ts-migrating
+          g();"
+        `);
+      });
+
+      // https://github.com/ycmjason/ts-migrating/issues/2
+      it('issue #2', () => {
+        const code = `const x = z\`I am \${cool}
+\${(awesome) => {
+  f();
+}}\`;
+g();`;
+        expect(
+          annotateDiagnostics(code, [
+            createDiagnosticAtPosition(code.indexOf('cool')),
+            createDiagnosticAtPosition(code.indexOf('awesome')),
+            createDiagnosticAtPosition(code.indexOf('f')),
+            createDiagnosticAtPosition(code.indexOf('g')),
+          ]),
+        ).toMatchInlineSnapshot(`
+          "// @ts-migrating
+          const x = z\`I am \${cool}
+          \${// @ts-migrating
+          awesome => {
+            // @ts-migrating
+            f();
+          }}\`;
+          // @ts-migrating
+          g();"
+        `);
+      });
+    });
+
+    it('should add @ts-migrating comment last', () => {
+      const code = '// hello world\nconst x = 3;';
+      expect(
+        annotateDiagnostics(code, [createDiagnosticAtPosition(code.indexOf('x'))]),
+      ).toMatchInlineSnapshot(`
+        "// hello world
+        // @ts-migrating
+        const x = 3;"
+      `);
+    });
+
+    it('should add @ts-migrating correctly for object computed property name', () => {
+      const code = 'const obj = {\n  [a]: 3,\n}';
+      expect(
+        annotateDiagnostics(code, [createDiagnosticAtPosition(code.indexOf('a'))]),
+      ).toMatchInlineSnapshot(`
+        "const obj = {
+          // @ts-migrating
+          [a]: 3,
+        }"
+      `);
+    });
+
+    describe('if-else', () => {
+      it('should add @ts-migrating correctly for else if', () => {
+        const code = `if (a) {
+f();
+} else if (b) {
+} else {
+}`;
+        expect(
+          annotateDiagnostics(code, [createDiagnosticAtPosition(code.indexOf('b'))]),
+        ).toMatchInlineSnapshot(`
+          "if (a) {
+          f();
+          // @ts-migrating
+          } else if (b) {
+          } else {
+          }"
+        `);
+      });
+
+      it('should add @ts-migrating correctly for else if', () => {
+        const code = `if (a) {
+f();
+}
+else if (b) {
+} else {
+}`;
+        expect(
+          annotateDiagnostics(code, [createDiagnosticAtPosition(code.indexOf('b'))]),
+        ).toMatchInlineSnapshot(`
+          "if (a) {
+          f();
+          }
+          // @ts-migrating
+          else if (b) {
+          } else {
+          }"
+        `);
+      });
+    });
+
+    describe('for-loop', () => {
+      it('should add @ts-migrating correctly for for-loops', () => {
+        const code = `for (let i = 0; i < callbacks.length; i += 1) {
+  callbacks[i](event);
+}`;
+
+        expect(
+          annotateDiagnostics(code, [createDiagnosticAtPosition(code.indexOf('callbacks[i]'))]),
+        ).toMatchInlineSnapshot(`
+          "for (let i = 0; i < callbacks.length; i += 1) {
+            // @ts-migrating
+            callbacks[i](event);
+          }"
+        `);
+      });
+    });
+
+    it('should deal with chains correctly', () => {
+      const code = `const panel1ScrollHeight = jest
+      .spyOn(panel1, "scrollHeight", "get");`;
+      expect(
+        annotateDiagnostics(code, [createDiagnosticAtPosition(code.indexOf('spyOn'))]),
+      ).toMatchInlineSnapshot(`
+        "const panel1ScrollHeight = jest
+              // @ts-migrating
+              .spyOn(panel1, "scrollHeight", "get");"
+      `);
+    });
+
+    // Currently failing due to: https://github.com/benjamn/recast/issues/1423
+    it.skip('should annotate correctly for weird formatted ternary', () => {
+      // failed case from https://github.com/bluesky-social/social-app/blob/fd37d92f85ddf0f075a67c4e9b2d85bef38f1835/src/components/KnownFollowers.tsx#L177-L245
+      const code = `const a = <Text>
+  {slice.length >= 2 ? (
+    // 2-n followers, including blocks
+    serverCount > 2 ? (
+      <Trans>
+        Followed by{' '}
+        <Text emoji key={aaa.profile.did} style={textStyle}>
+          {bbb.profile.displayName}
+        </Text>
+        ,{' '}
+        <Text emoji key={ccc.profile.did} style={textStyle}>
+          {ddd.profile.displayName}
+        </Text>
+        , and{' '}
+        <Plural
+          value={serverCount - 2}
+          one="# other"
+          other="# others"
+        />
+      </Trans>
+    ) : (
+      // only 2
+      <Trans>
+        Followed by{' '}
+        <Text emoji key={eee.profile.did} style={textStyle}>
+          {fff.profile.displayName}
+        </Text>{' '}
+        and{' '}
+        <Text emoji key={ggg.profile.did} style={textStyle}>
+          {hhh.profile.displayName}
+        </Text>
+      </Trans>
+    )
+  ) : serverCount > 1 ? (
+    // 1-n followers, including blocks
+    <Trans>
+      Followed by{' '}
+      <Text emoji key={iii.profile.did} style={textStyle}>
+        {jjj.profile.displayName}
+      </Text>{' '}
+      and{' '}
+      <Plural
+        value={serverCount - 1}
+        one="# other"
+        other="# others"
+      />
+    </Trans>
+  ) : (
+    // only 1
+    <Trans>
+      Followed by{' '}
+      <Text emoji key={lll.profile.did} style={textStyle}>
+        {mmm.profile.displayName}
+      </Text>
+    </Trans>
+  )}
+</Text>`;
+      expect(
+        annotateDiagnostics(code, [
+          createDiagnosticAtPosition(code.indexOf('aaa')),
+          createDiagnosticAtPosition(code.indexOf('bbb')),
+          createDiagnosticAtPosition(code.indexOf('ccc')),
+          createDiagnosticAtPosition(code.indexOf('ddd')),
+          createDiagnosticAtPosition(code.indexOf('eee')),
+          createDiagnosticAtPosition(code.indexOf('fff')),
+          createDiagnosticAtPosition(code.indexOf('ggg')),
+          createDiagnosticAtPosition(code.indexOf('hhh')),
+          createDiagnosticAtPosition(code.indexOf('iii')),
+          createDiagnosticAtPosition(code.indexOf('jjj')),
+          createDiagnosticAtPosition(code.indexOf('lll')),
+          createDiagnosticAtPosition(code.indexOf('mmm')),
+        ]),
+      ).toMatchInlineSnapshot(`
+        "const a = <Text>
+          {slice.length >= 2 ? (
+            // 2-n followers, including blocks
+            serverCount > 2 ? (
+              <Trans>
+                Followed by{' '}
+                {/* @ts-migrating */}
+                <Text emoji key={aaa.profile.did} style={textStyle}>
+                  {/* @ts-migrating */}
+                  {bbb.profile.displayName}
+                </Text>
+                ,{' '}
+                {/* @ts-migrating */}
+                <Text emoji key={ccc.profile.did} style={textStyle}>
+                  {/* @ts-migrating */}
+                  {ddd.profile.displayName}
+                </Text>
+                , and{' '}
+                <Plural
+                  value={serverCount - 2}
+                  one="# other"
+                  other="# others"
+                />
+              </Trans>
+            ) : (
+              // only 2
+              <Trans>
+                Followed by{' '}
+                {/* @ts-migrating */}
+                <Text emoji key={eee.profile.did} style={textStyle}>
+                  {/* @ts-migrating */}
+                  {fff.profile.displayName}
+                </Text>{' '}
+                and{' '}
+                {/* @ts-migrating */}
+                <Text emoji key={ggg.profile.did} style={textStyle}>
+                  {/* @ts-migrating */}
+                  {hhh.profile.displayName}
+                </Text>
+              </Trans>
+            )
+          ) : serverCount > 1 ? (
+            // 1-n followers, including blocks
+            <Trans>
+              Followed by{' '}
+              {/* @ts-migrating */}
+              <Text emoji key={iii.profile.did} style={textStyle}>
+                {/* @ts-migrating */}
+                {jjj.profile.displayName}
+              </Text>{' '}
+              and{' '}
+              <Plural
+                value={serverCount - 1}
+                one="# other"
+                other="# others"
+              />
+            </Trans>
+          ) : (
+            // only 1
+            <Trans>
+              Followed by{' '}
+              {/* @ts-migrating */}
+              <Text emoji key={lll.profile.did} style={textStyle}>
+                {/* @ts-migrating */}
+                {mmm.profile.displayName}
+              </Text>
+            </Trans>
+          )}
+        </Text>"
+      `);
     });
   });
 }
