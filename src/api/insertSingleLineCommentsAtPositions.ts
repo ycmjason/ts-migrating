@@ -1,5 +1,5 @@
 import * as recast from 'recast';
-import * as typescriptParser from 'recast/parsers/babel-ts';
+import * as babelTsParser from 'recast/parsers/babel-ts';
 import { expect } from 'vitest';
 import { maxBy } from './utils/maxBy';
 
@@ -91,12 +91,11 @@ export const insertSingleLineCommentAtPositions = (
   comment: string,
   positions: number[],
 ): string => {
-  const ast = recast.parse(code, { parser: typescriptParser });
+  const ast = recast.parse(code, { parser: babelTsParser });
 
   const linesToAdd = new Set(positions.map(position => getLineColumnPosition(code, position).line));
 
   const naiveComments = new Map<number, NaiveCommentType>();
-
   const addedLineNumbers = new Set<number>();
   const commentTypeStack: CommentType[] = ['vanilla-naive'];
 

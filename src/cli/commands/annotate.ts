@@ -352,6 +352,154 @@ else if (b) {
               .spyOn(panel1, "scrollHeight", "get");"
       `);
     });
+
+    // Currently failing due to: https://github.com/benjamn/recast/issues/1423
+    it.skip('should annotate correctly for weird formatted ternary', () => {
+      // failed case from https://github.com/bluesky-social/social-app/blob/fd37d92f85ddf0f075a67c4e9b2d85bef38f1835/src/components/KnownFollowers.tsx#L177-L245
+      const code = `const a = <Text>
+  {slice.length >= 2 ? (
+    // 2-n followers, including blocks
+    serverCount > 2 ? (
+      <Trans>
+        Followed by{' '}
+        <Text emoji key={aaa.profile.did} style={textStyle}>
+          {bbb.profile.displayName}
+        </Text>
+        ,{' '}
+        <Text emoji key={ccc.profile.did} style={textStyle}>
+          {ddd.profile.displayName}
+        </Text>
+        , and{' '}
+        <Plural
+          value={serverCount - 2}
+          one="# other"
+          other="# others"
+        />
+      </Trans>
+    ) : (
+      // only 2
+      <Trans>
+        Followed by{' '}
+        <Text emoji key={eee.profile.did} style={textStyle}>
+          {fff.profile.displayName}
+        </Text>{' '}
+        and{' '}
+        <Text emoji key={ggg.profile.did} style={textStyle}>
+          {hhh.profile.displayName}
+        </Text>
+      </Trans>
+    )
+  ) : serverCount > 1 ? (
+    // 1-n followers, including blocks
+    <Trans>
+      Followed by{' '}
+      <Text emoji key={iii.profile.did} style={textStyle}>
+        {jjj.profile.displayName}
+      </Text>{' '}
+      and{' '}
+      <Plural
+        value={serverCount - 1}
+        one="# other"
+        other="# others"
+      />
+    </Trans>
+  ) : (
+    // only 1
+    <Trans>
+      Followed by{' '}
+      <Text emoji key={lll.profile.did} style={textStyle}>
+        {mmm.profile.displayName}
+      </Text>
+    </Trans>
+  )}
+</Text>`;
+      expect(
+        annotateDiagnostics(code, [
+          createDiagnosticAtPosition(code.indexOf('aaa')),
+          createDiagnosticAtPosition(code.indexOf('bbb')),
+          createDiagnosticAtPosition(code.indexOf('ccc')),
+          createDiagnosticAtPosition(code.indexOf('ddd')),
+          createDiagnosticAtPosition(code.indexOf('eee')),
+          createDiagnosticAtPosition(code.indexOf('fff')),
+          createDiagnosticAtPosition(code.indexOf('ggg')),
+          createDiagnosticAtPosition(code.indexOf('hhh')),
+          createDiagnosticAtPosition(code.indexOf('iii')),
+          createDiagnosticAtPosition(code.indexOf('jjj')),
+          createDiagnosticAtPosition(code.indexOf('lll')),
+          createDiagnosticAtPosition(code.indexOf('mmm')),
+        ]),
+      ).toMatchInlineSnapshot(`
+        "const a = <Text>
+          {slice.length >= 2 ? (
+            // 2-n followers, including blocks
+            serverCount > 2 ? (
+              <Trans>
+                Followed by{' '}
+                {/* @ts-migrating */}
+                <Text emoji key={aaa.profile.did} style={textStyle}>
+                  {/* @ts-migrating */}
+                  {bbb.profile.displayName}
+                </Text>
+                ,{' '}
+                {/* @ts-migrating */}
+                <Text emoji key={ccc.profile.did} style={textStyle}>
+                  {/* @ts-migrating */}
+                  {ddd.profile.displayName}
+                </Text>
+                , and{' '}
+                <Plural
+                  value={serverCount - 2}
+                  one="# other"
+                  other="# others"
+                />
+              </Trans>
+            ) : (
+              // only 2
+              <Trans>
+                Followed by{' '}
+                {/* @ts-migrating */}
+                <Text emoji key={eee.profile.did} style={textStyle}>
+                  {/* @ts-migrating */}
+                  {fff.profile.displayName}
+                </Text>{' '}
+                and{' '}
+                {/* @ts-migrating */}
+                <Text emoji key={ggg.profile.did} style={textStyle}>
+                  {/* @ts-migrating */}
+                  {hhh.profile.displayName}
+                </Text>
+              </Trans>
+            )
+          ) : serverCount > 1 ? (
+            // 1-n followers, including blocks
+            <Trans>
+              Followed by{' '}
+              {/* @ts-migrating */}
+              <Text emoji key={iii.profile.did} style={textStyle}>
+                {/* @ts-migrating */}
+                {jjj.profile.displayName}
+              </Text>{' '}
+              and{' '}
+              <Plural
+                value={serverCount - 1}
+                one="# other"
+                other="# others"
+              />
+            </Trans>
+          ) : (
+            // only 1
+            <Trans>
+              Followed by{' '}
+              {/* @ts-migrating */}
+              <Text emoji key={lll.profile.did} style={textStyle}>
+                {/* @ts-migrating */}
+                {mmm.profile.displayName}
+              </Text>
+            </Trans>
+          )}
+        </Text>"
+      `);
+    });
   });
 }
 
