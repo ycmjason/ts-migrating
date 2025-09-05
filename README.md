@@ -2,7 +2,7 @@
 
 🚀 **TypeScript keeps evolving — and your `tsconfig` should too.**
 
-This plugin lets you upgrade to your desired `compilerOptions` (e.g. `strict`, `noUncheckedIndexedAccess`, `erasableSyntaxOnly`) across your entire codebase, while letting problematic lines fall back to the old `compilerOptions`.
+This plugin lets you upgrade to your desired `compilerOptions` (e.g. `strict`, `noUncheckedIndexedAccess`, `erasableSyntaxOnly`, `checkJs`) across your entire codebase, while letting problematic lines fall back to the old `compilerOptions`.
 
 Upgrading `tsconfig` often breaks existing code, and fixing all errors at once is unrealistic.
 
@@ -69,6 +69,7 @@ The philosophy behind the plugin follows three simple steps:
   | ![Migrating to noUncheckedIndexedAccess](./assets/ts-migrating-no-unchecked-indexed-access.png)  | ![Migrating to noUncheckedIndexedAccess marked](./assets/ts-migrating-no-unchecked-indexed-access-marked.png)  |
 
 * [Migrating to `erasableSyntaxOnly`](./examples/erasable-syntax-only-migration/src/index.ts)
+* [Migrating to `checkJs`](./examples/check-js-migration/src/index.js)
 
 ## 📦 Install and Setup
 
