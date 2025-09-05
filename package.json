@@ -51,11 +51,11 @@
 		"test:watch": "vitest"
 	},
 	"devDependencies": {
-		"@biomejs/biome": "^1.9.4",
-		"@types/node": "^22.16.5",
-		"ts-migrating": "link:.",
+		"@biomejs/biome": "^2.2.2",
+		"@types/node": "^24.3.1",
+		"ts-migrating": "link:",
 		"tsup": "^8.5.0",
-		"typescript": "^5.8.3",
+		"typescript": "^5.9.2",
 		"vitest": "^3.2.4"
 	},
 	"peerDependencies": {
@@ -65,7 +65,7 @@
 		"node": ">=18.0.0"
 	},
 	"dependencies": {
-		"@babel/parser": "^7.28.0",
+		"@babel/parser": "^7.28.3",
 		"@stricli/core": "^1.2.0",
 		"recast": "^0.23.11",
 		"tinyglobby": "^0.2.14"

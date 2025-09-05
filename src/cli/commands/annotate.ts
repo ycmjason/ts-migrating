@@ -1,3 +1,4 @@
+/** biome-ignore-all lint/suspicious/noTemplateCurlyInString: need to store template curly */
 import fs from 'node:fs/promises';
 import type ts from 'typescript/lib/tsserverlibrary';
 import { getSemanticDiagnosticsForFile } from '../../api/getSemanticDiagnostics';

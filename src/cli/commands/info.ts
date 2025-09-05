@@ -3,7 +3,7 @@ import packageJson from '../../../package.json' with { type: 'json' };
 import { getTSInfoForFile } from '../../api/mod';
 import { expandTSFilePaths } from '../expandTSFilePaths';
 
-export const info = (flags: unknown, ...pathsOrGlobs: string[]) => {
+export const info = (_flags: unknown, ...pathsOrGlobs: string[]) => {
   console.log('System information:');
   console.log(
     JSON.stringify(
