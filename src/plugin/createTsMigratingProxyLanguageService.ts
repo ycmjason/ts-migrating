@@ -21,10 +21,10 @@ export const createTsMigratingProxyLanguageService = ({
 }) =>
   createOverwritingProxy(fromLanguageService, {
     getQuickInfoAtPosition: (...attrs) => toLanguageService.getQuickInfoAtPosition(...attrs),
-    getSemanticDiagnostics: name => {
-      const diagnostics = fromLanguageService.getSemanticDiagnostics(name);
+    getSemanticDiagnostics: fileName => {
+      const diagnostics = fromLanguageService.getSemanticDiagnostics(fileName);
 
-      const sourceFile = fromLanguageService.getProgram()?.getSourceFile(name);
+      const sourceFile = fromLanguageService.getProgram()?.getSourceFile(fileName);
 
       if (!sourceFile) return diagnostics;
 
@@ -33,13 +33,13 @@ export const createTsMigratingProxyLanguageService = ({
           sourceFile.getLineAndCharacterOfPosition(position).line;
 
         const newlyIntroducedDiagnostics = differenceBy(
-          toLanguageService.getSemanticDiagnostics(name),
+          toLanguageService.getSemanticDiagnostics(fileName),
           diagnostics,
           serializeDiagnostic,
         );
 
         const directiveComments = fromLanguageService
-          .getTodoComments(name, [{ text: DIRECTIVE, priority: 0 }])
+          .getTodoComments(fileName, [{ text: DIRECTIVE, priority: 0 }])
           .filter(({ message }) => new RegExp(`^${DIRECTIVE}(\\s|$)`).test(message));
 
         return [

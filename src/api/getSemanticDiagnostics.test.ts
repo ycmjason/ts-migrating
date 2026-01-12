@@ -287,4 +287,43 @@ enum FRUITS {
     const diagnostics = getSemanticDiagnosticsForFile(join(tmpDir, 'src/index.ts'));
     expect(diagnostics).toHaveLength(0);
   });
+
+  it('should handle @ts-migrating directive on last function parameter (issue #8)', async () => {
+    const tmpDir = await setupTmpDir({
+      './tsconfig.json': JSON.stringify({
+        compilerOptions: {
+          target: 'ES2020',
+          module: 'commonjs',
+          outDir: './dist',
+          rootDir: './src',
+          strict: false,
+          noImplicitAny: false,
+          esModuleInterop: true,
+          forceConsistentCasingInFileNames: true,
+          plugins: [
+            {
+              name: 'ts-migrating',
+              compilerOptions: {
+                noImplicitAny: true,
+              },
+            },
+          ],
+          skipLibCheck: true,
+        },
+        include: ['src'],
+        exclude: ['node_modules', 'dist'],
+      }),
+      './src/index.ts': `function foo(
+  a: string,
+  // @ts-migrating
+  b
+) {
+  return a + b;
+}
+`,
+    });
+
+    const diagnostics = getSemanticDiagnosticsForFile(join(tmpDir, 'src/index.ts'));
+    expect(diagnostics).toHaveLength(0);
+  });
 });
