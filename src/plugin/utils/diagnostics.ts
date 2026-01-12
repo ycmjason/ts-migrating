@@ -44,7 +44,8 @@ const findNextNonCommentLine = (
   // typescript ast has no comments! so find the first AST node's line number that is after `fromLine`
   let found: number | undefined;
   const visit = (node: ts.Node) => {
-    const { line } = ts.getLineAndCharacterOfPosition(sourceFile, node.pos);
+    // Use getStart() to exclude leading trivia (comments/whitespace)
+    const { line } = ts.getLineAndCharacterOfPosition(sourceFile, node.getStart(sourceFile));
     if (found !== undefined) return node;
     if (line > fromLine) {
       found = line;
