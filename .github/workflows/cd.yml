@@ -15,22 +15,39 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       - name: Install pnpm
         uses: pnpm/action-setup@v4
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: 24
-          cache: 'pnpm'
+          cache: "pnpm"
           registry-url: "https://registry.npmjs.org"
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - run: pnpm build
+      - name: Build
+        run: pnpm build
 
-      - name: Publish to npm
-        run: bash ./scripts/build-and-publish.bash
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - name: Extract version info
+        id: version
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          if echo "$VERSION" | grep -qE '(alpha|beta|rc)'; then
+            PRERELEASE_TAG=$(echo "$VERSION" | grep -oE '(alpha|beta|rc)')
+            echo "prerelease_tag=$PRERELEASE_TAG" >> $GITHUB_OUTPUT
+            echo "is_prerelease=true" >> $GITHUB_OUTPUT
+          else
+            echo "is_prerelease=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Publish stable release to npm
+        if: steps.version.outputs.is_prerelease == 'false'
+        run: pnpm -r publish
+
+      - name: Publish pre-release to npm
+        if: steps.version.outputs.is_prerelease == 'true'
+        run: pnpm -r publish --tag ${{ steps.version.outputs.prerelease_tag }}
