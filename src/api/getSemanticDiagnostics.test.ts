@@ -12,7 +12,7 @@ const getTmpDir = (() => {
   const TMP_DIR = join(tmpdir(), 'ts-migrating-test');
   let i = 0;
   afterAll(() => {
-    rmSync(TMP_DIR, { recursive: true });
+    rmSync(TMP_DIR, { recursive: true, force: true });
   });
 
   return () => join(TMP_DIR, (i++).toString());
