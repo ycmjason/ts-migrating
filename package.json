@@ -69,6 +69,12 @@
 	"engines": {
 		"node": ">=18.0.0"
 	},
+	"devEngines": {
+		"runtime": {
+			"name": "node",
+			"version": "^24"
+		}
+	},
 	"dependencies": {
 		"@babel/parser": "^7.28.6",
 		"@stricli/core": "^1.2.5",
