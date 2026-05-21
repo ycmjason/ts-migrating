@@ -56,12 +56,12 @@
 		"test:watch": "vitest"
 	},
 	"devDependencies": {
-		"@biomejs/biome": "^2.3.11",
-		"@types/node": "^25.0.6",
+		"@biomejs/biome": "^2.4.15",
+		"@types/node": "^25.9.1",
 		"ts-migrating": "link:",
 		"tsup": "^8.5.1",
-		"typescript": "^5.9.3",
-		"vitest": "^4.0.17"
+		"typescript": "^6.0.3",
+		"vitest": "^4.1.7"
 	},
 	"peerDependencies": {
 		"typescript": ">=5.0.0"
@@ -76,10 +76,10 @@
 		}
 	},
 	"dependencies": {
-		"@babel/parser": "^7.28.6",
-		"@stricli/core": "^1.2.5",
+		"@babel/parser": "^7.29.3",
+		"@stricli/core": "^1.2.7",
 		"recast": "^0.23.11",
-		"tinyglobby": "^0.2.15"
+		"tinyglobby": "^0.2.16"
 	},
 	"packageManager": "pnpm@10.28.0+sha512.05df71d1421f21399e053fde567cea34d446fa02c76571441bfc1c7956e98e363088982d940465fd34480d4d90a0668bc12362f8aa88000a64e83d0b0e47be48"
 }
