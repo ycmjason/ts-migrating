@@ -7,7 +7,7 @@ on:
 
 jobs:
   ci:
-    name: Build, Lint, Format, TypeCheck and Test
+    name: Build, Lint, Format and TypeCheck
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -33,16 +33,13 @@ jobs:
       - name: Type check
         run: pnpm check:type
 
-      - name: Test
-        run: pnpm test
-
   test-typescript-matrix:
     name: Test (TypeScript ${{ matrix.typescript }})
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        typescript: ["5.0", "5.4", "5.8"]
+        typescript: ["5.0", "5.4", "5.8", "6.0"]
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
