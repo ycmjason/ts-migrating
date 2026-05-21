@@ -24,7 +24,6 @@ const supportsErasableSyntaxOnly = (() => {
   const [major, minor] = ts.version.split('.').map(Number) as [number, number];
   return major > 5 || (major === 5 && minor >= 8);
 })();
-const itIfErasableSyntaxOnly = it.skipIf(!supportsErasableSyntaxOnly);
 
 const setupTmpDir = async (json: Record<string, string>): Promise<string> => {
   const tmpDir = getTmpDir();
@@ -38,7 +37,7 @@ const setupTmpDir = async (json: Record<string, string>): Promise<string> => {
 };
 
 describe('@ts-migrating directive', () => {
-  itIfErasableSyntaxOnly(
+  it.skipIf(!supportsErasableSyntaxOnly)(
     'should mark enum line as error without the @ts-migrating directive',
     async () => {
       const tmpDir = await setupTmpDir({
@@ -89,47 +88,50 @@ describe('@ts-migrating directive', () => {
     },
   );
 
-  itIfErasableSyntaxOnly('should allow enum if marked with @ts-migrate', async () => {
-    const tmpDir = await setupTmpDir({
-      './tsconfig.json': JSON.stringify({
-        compilerOptions: {
-          target: 'ES2020',
-          module: 'commonjs',
-          outDir: './dist',
-          rootDir: './src',
-          strict: false,
-          esModuleInterop: true,
-          forceConsistentCasingInFileNames: true,
-          plugins: [
-            {
-              // ts will look up from the node_modules that the ts server is running from. e.g. ../../node_modules/ts-migrating
-              // this is why we add `ts-migrating` as dev dependency of itself.
-              name: 'ts-migrating',
-              compilerOptions: {
-                erasableSyntaxOnly: true,
+  it.skipIf(!supportsErasableSyntaxOnly)(
+    'should allow enum if marked with @ts-migrate',
+    async () => {
+      const tmpDir = await setupTmpDir({
+        './tsconfig.json': JSON.stringify({
+          compilerOptions: {
+            target: 'ES2020',
+            module: 'commonjs',
+            outDir: './dist',
+            rootDir: './src',
+            strict: false,
+            esModuleInterop: true,
+            forceConsistentCasingInFileNames: true,
+            plugins: [
+              {
+                // ts will look up from the node_modules that the ts server is running from. e.g. ../../node_modules/ts-migrating
+                // this is why we add `ts-migrating` as dev dependency of itself.
+                name: 'ts-migrating',
+                compilerOptions: {
+                  erasableSyntaxOnly: true,
+                },
               },
-            },
-          ],
-          skipLibCheck: true,
-        },
-        include: ['src'],
-        exclude: ['node_modules', 'dist'],
-      }),
-      './src/index.ts': `// @ts-migrating
+            ],
+            skipLibCheck: true,
+          },
+          include: ['src'],
+          exclude: ['node_modules', 'dist'],
+        }),
+        './src/index.ts': `// @ts-migrating
 enum FRUITS {
   APPLE,
   BANANA,
   KIWI,
 }
 `,
-    });
+      });
 
-    const diagnostics = getSemanticDiagnosticsForFile(join(tmpDir, 'src/index.ts'));
-    expect(diagnostics).toHaveLength(0);
-  });
+      const diagnostics = getSemanticDiagnosticsForFile(join(tmpDir, 'src/index.ts'));
+      expect(diagnostics).toHaveLength(0);
+    },
+  );
 });
 
-itIfErasableSyntaxOnly('should report unused @ts-migrating', async () => {
+it.skipIf(!supportsErasableSyntaxOnly)('should report unused @ts-migrating', async () => {
   const tmpDir = await setupTmpDir({
     './tsconfig.json': JSON.stringify({
       compilerOptions: {
@@ -261,7 +263,7 @@ enum FRUITS {
     expect(diagnostics).toHaveLength(0);
   });
 
-  itIfErasableSyntaxOnly('should ignore comments below', async () => {
+  it.skipIf(!supportsErasableSyntaxOnly)('should ignore comments below', async () => {
     const tmpDir = await setupTmpDir({
       './tsconfig.json': JSON.stringify({
         compilerOptions: {
