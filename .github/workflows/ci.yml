@@ -7,17 +7,17 @@ on:
 
 jobs:
   ci:
-    name: Build, Lint, Format, TypeCheck and Test
+    name: Build, Lint, Format and TypeCheck
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
       - name: Install pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v6
       - name: Set up Node.js
         uses: actions/setup-node@v6
         with:
-          node-version: 24
+          node-version-file: "package.json"
           cache: "pnpm"
           registry-url: "https://registry.npmjs.org"
 
@@ -32,6 +32,31 @@ jobs:
 
       - name: Type check
         run: pnpm check:type
+
+  test-typescript-matrix:
+    name: Test (TypeScript ${{ matrix.typescript }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        typescript: ["5.0", "5.4", "5.8", "6.0"]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+      - name: Install pnpm
+        uses: pnpm/action-setup@v6
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: "package.json"
+          cache: "pnpm"
+          registry-url: "https://registry.npmjs.org"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Override TypeScript version
+        run: pnpm add -D typescript@~${{ matrix.typescript }}
 
       - name: Test
         run: pnpm test
