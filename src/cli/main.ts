@@ -3,11 +3,11 @@ import process from 'node:process';
 import { buildApplication, buildCommand, buildRouteMap, run } from '@stricli/core';
 import packageJSON from '../../package.json' with { type: 'json' };
 import { ANNOTATE_WARNING } from './constants/annotate-warning';
-import { ensureHeapHeadroom } from './ensureHeapHeadroom';
+import { applyMaxOldSpaceSize } from './maxOldSpaceSize';
 
-// Must run before any heavy work: for the type-checking commands this may
-// re-exec node with a larger old-space limit and exit this process.
-ensureHeapHeadroom();
+// Honour a `--max-old-space-size` flag by re-exec'ing node with it before any
+// heavy work; returns the remaining args (with the flag removed) to parse.
+const args = applyMaxOldSpaceSize();
 
 (async () => {
   await run(
@@ -105,7 +105,7 @@ ${ANNOTATE_WARNING}`,
         },
       },
     ),
-    process.argv.slice(2),
+    args,
     { process },
   );
 })();

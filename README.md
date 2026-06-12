@@ -126,12 +126,14 @@ In your existing `tsconfig.json`, add the plugin:
 
   You should see errors from the new config, excluding those marked with `@ts-migrating`.
 
-  > 💾 On large codebases, `check` and `annotate` type-check the whole project,
-  > which can exceed Node's default heap. They automatically re-run Node with a
-  > larger `--max-old-space-size` (based on available memory) when needed. To
-  > pick the size yourself set `TS_MIGRATING_MAX_OLD_SPACE_SIZE` (in MB; `0`
-  > disables the auto-bump), or just pass your own `--max-old-space-size` /
-  > `NODE_OPTIONS` and it will be respected.
+  > 💾 **Running out of memory?** `check` and `annotate` type-check your whole
+  > project, so on large codebases they can exceed Node's default heap (you'll
+  > see `JavaScript heap out of memory`). Give Node a bigger heap by passing the
+  > same `--max-old-space-size` flag Node uses (in MB):
+  >
+  > ```bash
+  > npx ts-migrating check --max-old-space-size=8192
+  > ```
 
 ### ✨ Optional Next Steps
 
