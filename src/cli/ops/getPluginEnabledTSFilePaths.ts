@@ -6,15 +6,26 @@ export const getPluginEnabledTSFilePaths = (
   { verbose }: { verbose: boolean },
 ): string[] => {
   console.log('🔎  Looking for ts-migrating enabled TypeScript files...');
-  const pluginEnabledFiles = expandTSFilePaths(inputPaths.length <= 0 ? ['.'] : inputPaths).filter(
-    path => {
-      const { pluginEnabled } = getTSInfoForFile(path);
-      if (verbose && !pluginEnabled) {
-        console.warn(`⚠️ Skipping "${path}" (tsconfig missing ts-migrating plugin).`);
+  const pluginEnabledFiles = expandTSFilePaths(inputPaths.length <= 0 ? ['.'] : inputPaths)
+    .flatMap(path => {
+      const { pluginEnabled, tsconfigPath } = getTSInfoForFile(path);
+      if (!pluginEnabled) {
+        if (verbose) {
+          console.warn(`⚠️ Skipping "${path}" (tsconfig missing ts-migrating plugin).`);
+        }
+        return [];
       }
-      return pluginEnabled;
-    },
-  );
+      return [{ path, tsconfigPath }];
+    })
+    // Group files by their tsconfig so that consecutive files share a project.
+    // `getSemanticDiagnosticsForFile` tears down and rebuilds the underlying
+    // TypeScript project (both language services) whenever the next file belongs
+    // to a different project. Processing files grouped by tsconfig keeps that to
+    // one build per project instead of one per file, which would otherwise blow
+    // up both time and memory on repos with multiple tsconfigs interleaved in
+    // glob order. See https://github.com/ycmjason/ts-migrating/issues/16
+    .sort((a, b) => a.tsconfigPath.localeCompare(b.tsconfigPath))
+    .map(({ path }) => path);
 
   const fileCount = pluginEnabledFiles.length;
   console.log(

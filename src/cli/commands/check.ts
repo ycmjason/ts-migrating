@@ -15,50 +15,48 @@ export const check = async (
 
   console.log();
 
-  const allDiagnostics: ts.Diagnostic[] = [];
+  // Keep running counts only. Holding on to every diagnostic for the whole run
+  // pins each one's `SourceFile` and message chain, which adds up to a lot of
+  // memory on large repos. See https://github.com/ycmjason/ts-migrating/issues/16
+  let totalErrorCount = 0;
+  let pluginErrorCount = 0;
 
   console.time('Type checking duration');
   for (const file of pluginEnabledFiles) {
     const diagnostics = getSemanticDiagnosticsForFile(file);
-    allDiagnostics.push(...diagnostics);
+    totalErrorCount += diagnostics.length;
 
-    if (diagnostics.length > 0) {
+    const pluginDiagnostics = diagnostics.filter(isPluginDiagnostic);
+    pluginErrorCount += pluginDiagnostics.length;
+
+    const diagnosticsToReport = isCheckingAllTypeErrors ? diagnostics : pluginDiagnostics;
+    if (diagnosticsToReport.length > 0) {
       console.log(
-        ts.formatDiagnosticsWithColorAndContext(
-          diagnostics.filter(d => {
-            if (isCheckingAllTypeErrors) return true;
-            return isPluginDiagnostic(d);
-          }),
-          {
-            getCanonicalFileName: fileName => fileName,
-            getCurrentDirectory: () => process.cwd(),
-            getNewLine: () => ts.sys.newLine,
-          },
-        ),
+        ts.formatDiagnosticsWithColorAndContext(diagnosticsToReport, {
+          getCanonicalFileName: fileName => fileName,
+          getCurrentDirectory: () => process.cwd(),
+          getNewLine: () => ts.sys.newLine,
+        }),
       );
     }
   }
   console.timeEnd('Type checking duration');
 
   if (isCheckingAllTypeErrors) {
-    if (allDiagnostics.length > 0) {
-      console.error(
-        `❌ ${allDiagnostics.length} type error${allDiagnostics.length === 1 ? '' : 's'} found.`,
-      );
+    if (totalErrorCount > 0) {
+      console.error(`❌ ${totalErrorCount} type error${totalErrorCount === 1 ? '' : 's'} found.`);
     } else {
       console.log('✅ No type errors found.');
     }
   }
 
-  const pluginDiagnostics = allDiagnostics.filter(diagnostics => isPluginDiagnostic(diagnostics));
-
-  if (pluginDiagnostics.length > 0) {
+  if (pluginErrorCount > 0) {
     console.error(
-      `❌ ${pluginDiagnostics.length} unmarked plugin error${pluginDiagnostics.length === 1 ? '' : 's'} found. Run \`npx ts-migrating annotate\` to automatically mark them!`,
+      `❌ ${pluginErrorCount} unmarked plugin error${pluginErrorCount === 1 ? '' : 's'} found. Run \`npx ts-migrating annotate\` to automatically mark them!`,
     );
   } else {
     console.log('✅ No unmarked plugin errors found.');
   }
 
-  process.exit(Math.min((isCheckingAllTypeErrors ? allDiagnostics : pluginDiagnostics).length, 1));
+  process.exit(Math.min(isCheckingAllTypeErrors ? totalErrorCount : pluginErrorCount, 1));
 };
