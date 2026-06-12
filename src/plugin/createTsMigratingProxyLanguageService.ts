@@ -21,6 +21,19 @@ export const createTsMigratingProxyLanguageService = ({
   toLanguageService: TsServerLibrary.LanguageService;
 }) =>
   createOverwritingProxy(fromLanguageService, {
+    /**
+     * A project only disposes its (proxied) primary language service when it
+     * closes, which would leave our secondary service holding references to
+     * every source file it acquired from the shared document registry. Those
+     * references keep the source files ref-counted — and therefore alive — for
+     * the rest of the process, accumulating across projects. Dispose the
+     * secondary service too so it releases them. See
+     * https://github.com/ycmjason/ts-migrating/issues/16
+     */
+    dispose: () => {
+      toLanguageService.dispose();
+      fromLanguageService.dispose();
+    },
     getQuickInfoAtPosition: (...attrs) => toLanguageService.getQuickInfoAtPosition(...attrs),
     getSemanticDiagnostics: fileName => {
       const diagnostics = fromLanguageService.getSemanticDiagnostics(fileName);

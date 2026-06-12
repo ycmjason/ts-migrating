@@ -1,5 +1,5 @@
 import ts from 'typescript/lib/tsserverlibrary';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { isPluginDiagnostic } from '../api/isPluginDiagnostic';
 import { createTsMigratingProxyLanguageService } from './createTsMigratingProxyLanguageService';
 
@@ -81,5 +81,26 @@ describe('createTsMigratingProxyLanguageService', () => {
     const pluginDiagnostics = proxy.getSemanticDiagnostics(fileName).filter(isPluginDiagnostic);
 
     expect(pluginDiagnostics).toHaveLength(1);
+  });
+
+  // https://github.com/ycmjason/ts-migrating/issues/16
+  // The secondary service shares the project's document registry, so it must
+  // release its documents when the project disposes the (proxied) primary
+  // service — otherwise those source files stay ref-counted and accumulate
+  // across projects.
+  it('disposes the secondary service alongside the primary one', () => {
+    const fromLanguageService = { dispose: vi.fn() } as unknown as ts.LanguageService;
+    const toLanguageService = { dispose: vi.fn() } as unknown as ts.LanguageService;
+
+    const proxy = createTsMigratingProxyLanguageService({
+      ts,
+      fromLanguageService,
+      toLanguageService,
+    });
+
+    proxy.dispose();
+
+    expect(toLanguageService.dispose).toHaveBeenCalledTimes(1);
+    expect(fromLanguageService.dispose).toHaveBeenCalledTimes(1);
   });
 });

@@ -3,6 +3,11 @@ import process from 'node:process';
 import { buildApplication, buildCommand, buildRouteMap, run } from '@stricli/core';
 import packageJSON from '../../package.json' with { type: 'json' };
 import { ANNOTATE_WARNING } from './constants/annotate-warning';
+import { applyMaxOldSpaceSize } from './maxOldSpaceSize';
+
+// Honour a `--max-old-space-size` flag by re-exec'ing node with it before any
+// heavy work; returns the remaining args (with the flag removed) to parse.
+const args = applyMaxOldSpaceSize();
 
 (async () => {
   await run(
@@ -100,7 +105,7 @@ ${ANNOTATE_WARNING}`,
         },
       },
     ),
-    process.argv.slice(2),
+    args,
     { process },
   );
 })();
