@@ -17,7 +17,7 @@ export const check = async (
   ...inputPaths: string[]
 ) => {
   if (reporter === 'json') {
-    return checkJsonReporter({ verbose }, ...inputPaths);
+    return checkJsonReporter({ verbose, allTypeErrors }, ...inputPaths);
   }
   return checkDefaultReporter({ verbose, allTypeErrors }, ...inputPaths);
 };
@@ -87,7 +87,10 @@ const checkDefaultReporter = (
  * also surfaces *marked* errors (the migration debt), which `check` normally
  * hides.
  */
-const checkJsonReporter = ({ verbose }: { verbose: boolean }, ...inputPaths: string[]): never => {
+const checkJsonReporter = (
+  { verbose, allTypeErrors }: { verbose: boolean; allTypeErrors: boolean },
+  ...inputPaths: string[]
+): void => {
   // stdout must contain only the JSON document, so divert all progress chatter
   // (here and inside `getPluginEnabledTSFilePaths`) to stderr.
   const pluginEnabledFiles = getPluginEnabledTSFilePaths(inputPaths, {
@@ -98,21 +101,32 @@ const checkJsonReporter = ({ verbose }: { verbose: boolean }, ...inputPaths: str
   const cwd = process.cwd();
   const rows: JsonReportRow[] = [];
   let unmarkedTsMigratingErrorCount = 0;
+  let baselineErrorCount = 0;
 
   // Map each diagnostic to a plain row immediately and keep only the rows — never
   // the diagnostics themselves — so we stay within the memory budget from #16.
   for (const file of pluginEnabledFiles) {
     for (const entry of getTsMigratingReportForFile(file)) {
       rows.push(toJsonReportRow(entry, { cwd }));
-      if (entry.origin === 'ts-migrating' && !entry.markedWithTsMigratingDirective) {
+      if (entry.origin === 'baseline') {
+        baselineErrorCount += 1;
+      } else if (!entry.markedWithTsMigratingDirective) {
         unmarkedTsMigratingErrorCount += 1;
       }
     }
   }
 
-  process.stdout.write(`${JSON.stringify(rows, null, 2)}\n`);
+  // Mirror the default reporter's gate so the same command can both emit a report
+  // and gate CI: unmarked ts-migrating errors fail, and with `--all-type-errors`
+  // pre-existing (baseline) errors fail too. Marked errors are acknowledged debt
+  // and never fail.
+  const hasBlockingErrors =
+    unmarkedTsMigratingErrorCount > 0 || (allTypeErrors && baselineErrorCount > 0);
 
-  // Preserve `check`'s contract: a non-zero exit when there are unannotated
-  // ts-migrating errors, so the same command can both gate CI and emit a report.
-  process.exit(unmarkedTsMigratingErrorCount > 0 ? 1 : 0);
+  // Wait for stdout to drain before exiting. On large repos the JSON can exceed
+  // the OS pipe buffer, in which case `write` only queues it — exiting straight
+  // away would truncate the document into invalid JSON.
+  process.stdout.write(`${JSON.stringify(rows, null, 2)}\n`, () => {
+    process.exit(hasBlockingErrors ? 1 : 0);
+  });
 };

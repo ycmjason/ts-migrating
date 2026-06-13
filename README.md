@@ -182,7 +182,7 @@ npx ts-migrating check --reporter json \
   | jq 'group_by(.code)[] | select(.[0].origin == "ts-migrating") | { code: .[0].code, count: length }'
 ```
 
-> ℹ️ The command still exits non-zero when there are *unmarked* `ts-migrating` errors, so it can both gate CI and produce the report. The JSON is printed regardless of the exit code.
+> ℹ️ The command still exits non-zero when there are *unmarked* `ts-migrating` errors (and, with `--all-type-errors`, when there are pre-existing `baseline` errors), so it can both gate CI and produce the report. The JSON is printed regardless of the exit code.
 
 ## API
 
