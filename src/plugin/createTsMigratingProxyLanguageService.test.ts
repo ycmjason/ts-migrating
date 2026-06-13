@@ -1,6 +1,7 @@
 import ts from 'typescript/lib/tsserverlibrary';
 import { describe, expect, it, vi } from 'vitest';
 import { isPluginDiagnostic } from '../api/isPluginDiagnostic';
+import { DIRECTIVE } from './constants/DIRECTIVE';
 import { createTsMigratingProxyLanguageService } from './createTsMigratingProxyLanguageService';
 
 const sourceFileOf = (fileName: string, content: string): ts.SourceFile =>
@@ -81,6 +82,77 @@ describe('createTsMigratingProxyLanguageService', () => {
     const pluginDiagnostics = proxy.getSemanticDiagnostics(fileName).filter(isPluginDiagnostic);
 
     expect(pluginDiagnostics).toHaveLength(1);
+  });
+
+  describe('getTsMigratingReport', () => {
+    const fileName = '/proj/index.ts';
+    // Two newly-introduced errors; the directive on the middle line marks the
+    // second statement, so it should come back as `marked` migration debt.
+    const content = ['const a = obj[0];', '// @ts-migrating', 'const b = obj[1];', ''].join('\n');
+    const sourceFile = sourceFileOf(fileName, content);
+
+    const errorAt = (needle: string): ts.Diagnostic => ({
+      category: ts.DiagnosticCategory.Error,
+      code: 18048,
+      file: sourceFile,
+      start: content.indexOf(needle),
+      length: needle.length,
+      messageText: `'${needle}' is possibly 'undefined'.`,
+    });
+
+    const buildReportProxy = ({ baseline }: { baseline: ts.Diagnostic[] }) => {
+      const fromLanguageService = {
+        getSemanticDiagnostics: () => baseline,
+        getTodoComments: () => [
+          {
+            descriptor: { text: DIRECTIVE, priority: 0 },
+            message: DIRECTIVE,
+            position: content.indexOf(DIRECTIVE),
+          },
+        ],
+        getProgram: () => ({
+          getSourceFile: (f: string) => (f === fileName ? sourceFile : undefined),
+        }),
+      } as unknown as ts.LanguageService;
+
+      const toLanguageService = {
+        getSemanticDiagnostics: () => [...baseline, errorAt('obj[0]'), errorAt('obj[1]')],
+      } as unknown as ts.LanguageService;
+
+      return createTsMigratingProxyLanguageService({ ts, fromLanguageService, toLanguageService });
+    };
+
+    it('partitions diagnostics into baseline, unmarked and marked', () => {
+      const baseline = [errorAt('const a')];
+      const report = buildReportProxy({ baseline }).getTsMigratingReport(fileName);
+
+      const summarise = (origin: 'baseline' | 'ts-migrating', marked: boolean) =>
+        report
+          .filter(e => e.origin === origin && e.markedWithTsMigratingDirective === marked)
+          .map(e => e.diagnostic.start);
+
+      // baseline error passes through untouched
+      expect(summarise('baseline', false)).toEqual([content.indexOf('const a')]);
+      // `obj[0]` has no directive -> unmarked (this is what `check` fails on)
+      expect(summarise('ts-migrating', false)).toEqual([content.indexOf('obj[0]')]);
+      // `obj[1]` sits under the directive -> marked debt, and it keeps its code
+      expect(summarise('ts-migrating', true)).toEqual([content.indexOf('obj[1]')]);
+      expect(report.find(e => e.markedWithTsMigratingDirective)?.diagnostic.code).toBe(18048);
+    });
+
+    it('marked entries are exactly the ones hidden from getSemanticDiagnostics', () => {
+      const proxy = buildReportProxy({ baseline: [] });
+
+      const reportedToEditor = proxy.getSemanticDiagnostics(fileName).filter(isPluginDiagnostic);
+      const marked = proxy
+        .getTsMigratingReport(fileName)
+        .filter(e => e.markedWithTsMigratingDirective);
+
+      // the editor/CLI sees only the single unmarked error...
+      expect(reportedToEditor).toHaveLength(1);
+      // ...while the report additionally exposes the suppressed (marked) one.
+      expect(marked).toHaveLength(1);
+    });
   });
 
   // https://github.com/ycmjason/ts-migrating/issues/16

@@ -29,10 +29,18 @@ const args = applyMaxOldSpaceSize();
                     'Display all type errors. By default, this command only show [ts-migrating] errors, which are type errors introduced by the new tsconfig.',
                   default: false,
                 },
+                reporter: {
+                  kind: 'enum',
+                  values: ['default', 'json'],
+                  brief:
+                    'Output format. "json" prints a flat JSON array of every diagnostic (with origin and @ts-migrating directive info) for CI gates / dashboards.',
+                  default: 'default',
+                },
               },
               aliases: {
                 v: 'verbose',
                 a: 'allTypeErrors',
+                r: 'reporter',
               },
               positional: {
                 kind: 'array',

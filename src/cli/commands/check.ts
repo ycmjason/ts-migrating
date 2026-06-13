@@ -1,9 +1,28 @@
+import process from 'node:process';
 import ts from 'typescript/lib/tsserverlibrary';
 import { getSemanticDiagnosticsForFile } from '../../api/getSemanticDiagnostics';
+import { getTsMigratingReportForFile } from '../../api/getTsMigratingReportForFile';
 import { isPluginDiagnostic } from '../../api/isPluginDiagnostic';
 import { getPluginEnabledTSFilePaths } from '../ops/getPluginEnabledTSFilePaths';
+import { type JsonReportRow, toJsonReportRow } from '../reporters/jsonReport';
+
+export type Reporter = 'default' | 'json';
 
 export const check = async (
+  {
+    verbose,
+    allTypeErrors,
+    reporter,
+  }: { verbose: boolean; allTypeErrors: boolean; reporter: Reporter },
+  ...inputPaths: string[]
+) => {
+  if (reporter === 'json') {
+    return checkJsonReporter({ verbose }, ...inputPaths);
+  }
+  return checkDefaultReporter({ verbose, allTypeErrors }, ...inputPaths);
+};
+
+const checkDefaultReporter = (
   { verbose, allTypeErrors: isCheckingAllTypeErrors }: { verbose: boolean; allTypeErrors: boolean },
   ...inputPaths: string[]
 ) => {
@@ -59,4 +78,41 @@ export const check = async (
   }
 
   process.exit(Math.min(isCheckingAllTypeErrors ? totalErrorCount : pluginErrorCount, 1));
+};
+
+/**
+ * Emits a flat JSON array of every diagnostic — each tagged with its `origin`
+ * (`ts-migrating` vs `baseline`) and whether a `@ts-migrating` directive marks
+ * it — for CI gates and dashboards to consume. Unlike the default reporter this
+ * also surfaces *marked* errors (the migration debt), which `check` normally
+ * hides.
+ */
+const checkJsonReporter = ({ verbose }: { verbose: boolean }, ...inputPaths: string[]): never => {
+  // stdout must contain only the JSON document, so divert all progress chatter
+  // (here and inside `getPluginEnabledTSFilePaths`) to stderr.
+  const pluginEnabledFiles = getPluginEnabledTSFilePaths(inputPaths, {
+    verbose,
+    log: console.error,
+  });
+
+  const cwd = process.cwd();
+  const rows: JsonReportRow[] = [];
+  let unmarkedTsMigratingErrorCount = 0;
+
+  // Map each diagnostic to a plain row immediately and keep only the rows — never
+  // the diagnostics themselves — so we stay within the memory budget from #16.
+  for (const file of pluginEnabledFiles) {
+    for (const entry of getTsMigratingReportForFile(file)) {
+      rows.push(toJsonReportRow(entry, { cwd }));
+      if (entry.origin === 'ts-migrating' && !entry.markedWithTsMigratingDirective) {
+        unmarkedTsMigratingErrorCount += 1;
+      }
+    }
+  }
+
+  process.stdout.write(`${JSON.stringify(rows, null, 2)}\n`);
+
+  // Preserve `check`'s contract: a non-zero exit when there are unannotated
+  // ts-migrating errors, so the same command can both gate CI and emit a report.
+  process.exit(unmarkedTsMigratingErrorCount > 0 ? 1 : 0);
 };
