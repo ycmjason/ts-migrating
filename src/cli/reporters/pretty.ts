@@ -1,7 +1,7 @@
 import process from 'node:process';
 import ts from 'typescript/lib/tsserverlibrary';
 import { brandifyDiagnostic } from '../../plugin/utils/diagnostics';
-import { runReport } from './helpers/runReport';
+import { type ReportTally, runReport } from './helpers/runReport';
 
 const FORMAT_HOST: ts.FormatDiagnosticsHost = {
   getCanonicalFileName: fileName => fileName,
@@ -16,35 +16,32 @@ const FORMAT_HOST: ts.FormatDiagnosticsHost = {
  *
  * Built on {@link runReport}: it skips marked debt, shows only `ts-migrating`
  * errors by default (`--all-type-errors` adds baseline ones), and re-brands
- * `ts-migrating` diagnostics so they read as `[ts-migrating]`. The exit code is
- * handled by `runReport`.
+ * `ts-migrating` diagnostics so they read as `[ts-migrating]`.
  */
 export const prettyReporter = (
   { verbose, allTypeErrors }: { verbose: boolean; allTypeErrors: boolean },
   ...inputPaths: string[]
-): void => {
+): ReportTally => {
   console.log(
     `⏳ Checking for ${allTypeErrors ? 'all TypeScript errors' : '[ts-migrating] plugin errors only'}...`,
   );
   console.log();
 
   console.time('Type checking duration');
-  const { unmarkedTsMigratingErrorCount, baselineErrorCount } = runReport(
-    { verbose, allTypeErrors },
-    inputPaths,
-    entry => {
-      // Acknowledged debt is never shown.
-      if (entry.markedWithTsMigratingDirective) return;
-      // Default view is [ts-migrating] errors only; -a also shows baseline errors.
-      if (!allTypeErrors && entry.origin === 'baseline') return;
-      // Brand ts-migrating errors so they read as `[ts-migrating]`; baseline
-      // errors are real `tsc` errors and stay as-is.
-      const diagnostic =
-        entry.origin === 'ts-migrating' ? brandifyDiagnostic(entry.diagnostic) : entry.diagnostic;
-      console.log(ts.formatDiagnosticsWithColorAndContext([diagnostic], FORMAT_HOST));
-    },
-  );
+  const tally = runReport({ verbose }, inputPaths, entry => {
+    // Acknowledged debt is never shown.
+    if (entry.markedWithTsMigratingDirective) return;
+    // Default view is [ts-migrating] errors only; -a also shows baseline errors.
+    if (!allTypeErrors && entry.origin === 'baseline') return;
+    // Brand ts-migrating errors so they read as `[ts-migrating]`; baseline
+    // errors are real `tsc` errors and stay as-is.
+    const diagnostic =
+      entry.origin === 'ts-migrating' ? brandifyDiagnostic(entry.diagnostic) : entry.diagnostic;
+    console.log(ts.formatDiagnosticsWithColorAndContext([diagnostic], FORMAT_HOST));
+  });
   console.timeEnd('Type checking duration');
+
+  const { unmarkedTsMigratingErrorCount, baselineErrorCount } = tally;
 
   if (allTypeErrors) {
     const totalErrorCount = unmarkedTsMigratingErrorCount + baselineErrorCount;
@@ -62,4 +59,6 @@ export const prettyReporter = (
   } else {
     console.log('✅ No unmarked plugin errors found.');
   }
+
+  return tally;
 };

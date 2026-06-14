@@ -1,5 +1,5 @@
 import process from 'node:process';
-import { runReport } from './helpers/runReport';
+import { type ReportTally, runReport } from './helpers/runReport';
 import { toReportItem } from './helpers/toReportItem';
 
 /**
@@ -8,11 +8,11 @@ import { toReportItem } from './helpers/toReportItem';
  * for large repos and shell pipelines (`jq -c`, `grep`, `wc -l`).
  */
 export const ndjsonReporter = (
-  options: { verbose: boolean; allTypeErrors: boolean },
+  { verbose }: { verbose: boolean; allTypeErrors: boolean },
   ...inputPaths: string[]
-): void => {
+): ReportTally => {
   const cwd = process.cwd();
-  runReport(options, inputPaths, entry => {
+  return runReport({ verbose }, inputPaths, entry => {
     console.log(JSON.stringify(toReportItem(entry, { cwd })));
   });
 };

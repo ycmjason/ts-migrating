@@ -1,5 +1,5 @@
 import process from 'node:process';
-import { runReport } from './helpers/runReport';
+import { type ReportTally, runReport } from './helpers/runReport';
 import { type ReportItem, toReportItem } from './helpers/toReportItem';
 
 /**
@@ -8,13 +8,14 @@ import { type ReportItem, toReportItem } from './helpers/toReportItem';
  * streams instead of holding everything in memory.
  */
 export const jsonReporter = (
-  options: { verbose: boolean; allTypeErrors: boolean },
+  { verbose }: { verbose: boolean; allTypeErrors: boolean },
   ...inputPaths: string[]
-): void => {
+): ReportTally => {
   const cwd = process.cwd();
   const items: ReportItem[] = [];
-  runReport(options, inputPaths, entry => {
+  const tally = runReport({ verbose }, inputPaths, entry => {
     items.push(toReportItem(entry, { cwd }));
   });
   console.log(JSON.stringify(items, null, 2));
+  return tally;
 };
