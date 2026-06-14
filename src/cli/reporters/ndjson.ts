@@ -1,6 +1,6 @@
 import process from 'node:process';
 import { runReport } from './helpers/runReport';
-import { toReportRow } from './helpers/toReportRow';
+import { toReportItem } from './helpers/toReportItem';
 
 /**
  * Streams every diagnostic as one JSON object per line (NDJSON), so this process
@@ -13,6 +13,6 @@ export const ndjsonReporter = (
 ): void => {
   const cwd = process.cwd();
   runReport(options, inputPaths, {
-    onEntry: entry => console.log(JSON.stringify(toReportRow(entry, { cwd }))),
+    onEntry: entry => console.log(JSON.stringify(toReportItem(entry, { cwd }))),
   });
 };

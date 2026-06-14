@@ -193,7 +193,7 @@ npx ts-migrating check --reporter ndjson \
 
 > ℹ️ The command still exits non-zero when there are *unmarked* `ts-migrating` errors (and, with `--all-type-errors`, when there are pre-existing `baseline` errors), so it can both gate CI and produce the report. The JSON is printed regardless of the exit code.
 
-> ℹ️ Stale (unused) `@ts-migrating` directives are reported too — as unmarked `ts-migrating` rows with code `555` — so the JSON gate fails on them exactly like the default `check`. Filter them out with `select(.code != 555)` if you only want real type errors.
+> ℹ️ Stale (unused) `@ts-migrating` directives are reported too — as unmarked `ts-migrating` entries with code `555` — so the JSON gate fails on them exactly like the default `check`. Filter them out with `select(.code != 555)` if you only want real type errors.
 
 ## API
 

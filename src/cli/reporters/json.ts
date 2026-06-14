@@ -1,6 +1,6 @@
 import process from 'node:process';
 import { runReport } from './helpers/runReport';
-import { type ReportRow, toReportRow } from './helpers/toReportRow';
+import { type ReportItem, toReportItem } from './helpers/toReportItem';
 
 /**
  * Buffers every diagnostic into a single JSON array. Convenient for `jq '.'` and
@@ -12,11 +12,11 @@ export const jsonReporter = (
   ...inputPaths: string[]
 ): void => {
   const cwd = process.cwd();
-  const rows: ReportRow[] = [];
+  const items: ReportItem[] = [];
   runReport(options, inputPaths, {
     onEntry: entry => {
-      rows.push(toReportRow(entry, { cwd }));
+      items.push(toReportItem(entry, { cwd }));
     },
-    onDone: () => console.log(JSON.stringify(rows, null, 2)),
+    onDone: () => console.log(JSON.stringify(items, null, 2)),
   });
 };

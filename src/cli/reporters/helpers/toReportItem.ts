@@ -10,7 +10,7 @@ type Position = { line: number; column: number };
  * and `--reporter ndjson` prints one per line. Flat on purpose: trivial to
  * group/sort/count, or pipe onwards to CSV.
  */
-export type ReportRow = {
+export type ReportItem = {
   /** Path relative to the current working directory. */
   file: string;
   /** `null` for file-level diagnostics that have no source position. */
@@ -22,11 +22,11 @@ export type ReportRow = {
   markedWithTsMigratingDirective: boolean;
 };
 
-/** Flatten a {@link TsMigratingReportEntry} into a serializable {@link ReportRow}. */
-export const toReportRow = (
+/** Flatten a {@link TsMigratingReportEntry} into a serializable {@link ReportItem}. */
+export const toReportItem = (
   { diagnostic, origin, markedWithTsMigratingDirective }: TsMigratingReportEntry,
   { cwd }: { cwd: string },
-): ReportRow => {
+): ReportItem => {
   const sourceFile = diagnostic.file;
 
   const position = (() => {
@@ -57,10 +57,10 @@ if (import.meta.vitest) {
   const sourceFileOf = (fileName: string, content: string): ts.SourceFile =>
     ts.createSourceFile(fileName, content, ts.ScriptTarget.ESNext, true);
 
-  describe('toReportRow', () => {
+  describe('toReportItem', () => {
     const cwd = '/repo';
 
-    it('maps a ts-migrating error to a flat row with a 1-based range', () => {
+    it('maps a ts-migrating error to a flat item with a 1-based range', () => {
       const file = sourceFileOf('/repo/src/one.ts', 'const a = 1;\nconst b = obj[i];\n');
       const start = 'const a = 1;\nconst b = '.length;
       const diagnostic: ts.Diagnostic = {
@@ -73,7 +73,7 @@ if (import.meta.vitest) {
       };
 
       expect(
-        toReportRow(
+        toReportItem(
           { diagnostic, origin: 'ts-migrating', markedWithTsMigratingDirective: false },
           { cwd },
         ),
@@ -106,13 +106,13 @@ if (import.meta.vitest) {
         },
       };
 
-      const row = toReportRow(
+      const item = toReportItem(
         { diagnostic, origin: 'baseline', markedWithTsMigratingDirective: false },
         { cwd },
       );
 
-      expect(row.message).toBe('Outer.\n  Inner.');
-      expect(row.origin).toBe('baseline');
+      expect(item.message).toBe('Outer.\n  Inner.');
+      expect(item.origin).toBe('baseline');
     });
 
     it('returns null position for diagnostics without a source position', () => {
@@ -126,7 +126,7 @@ if (import.meta.vitest) {
       };
 
       expect(
-        toReportRow(
+        toReportItem(
           { diagnostic, origin: 'baseline', markedWithTsMigratingDirective: false },
           { cwd },
         ).position,
