@@ -36,6 +36,20 @@ export const brandifyDiagnostic = (
   };
 };
 
+/**
+ * Reverse of {@link brandifyDiagnostic}: strip the `[ts-migrating]` wrapper so
+ * the original message is restored. Returns the diagnostic unchanged if it isn't
+ * branded. (`brandifyDiagnostic` only wraps `messageText`, so `code`/position are
+ * already intact.)
+ */
+export const unbrandDiagnostic = <D extends ts.DiagnosticRelatedInformation>(d: D): D => {
+  if (typeof d.messageText === 'string' || d.messageText.messageText !== PLUGIN_DIAGNOSTIC_TAG) {
+    return d;
+  }
+  const [original] = d.messageText.next ?? [];
+  return original === undefined ? d : { ...d, messageText: original };
+};
+
 const findNextNonCommentLine = (
   sourceFile: ts.SourceFile,
   /** zero indexed */

@@ -162,7 +162,7 @@ npx ts-migrating check --reporter ndjson  # one JSON object per line (streamable
     },
     "code": 7006,                            // the TypeScript error code
     "message": "Parameter 'x' implicitly has an 'any' type.",
-    "origin": "ts-migrating",                // "ts-migrating" = introduced by your target tsconfig; "baseline" = already fails `tsc`
+    "origin": "ts-migrating",                // "ts-migrating" = introduced by your target tsconfig; "baseline" = already present (current tsconfig + other plugins)
     "markedWithTsMigratingDirective": false  // true = suppressed by a @ts-migrating directive (i.e. migration debt)
   }
 ]

@@ -2,7 +2,6 @@ import ts from 'typescript/lib/tsserverlibrary';
 import { describe, expect, it, vi } from 'vitest';
 import { isPluginDiagnostic } from '../api/isPluginDiagnostic';
 import { DIRECTIVE } from './constants/DIRECTIVE';
-import { UNUSED_DIRECTIVE_DIAGNOSTIC_CODE } from './constants/UNUSED_DIRECTIVE_DIAGNOSTIC_CODE';
 import { createTsMigratingProxyLanguageService } from './createTsMigratingProxyLanguageService';
 
 const sourceFileOf = (fileName: string, content: string): ts.SourceFile =>
@@ -85,10 +84,10 @@ describe('createTsMigratingProxyLanguageService', () => {
     expect(pluginDiagnostics).toHaveLength(1);
   });
 
-  describe('getTsMigratingReport', () => {
+  describe('getTsMigratingMarkedDebt', () => {
     const fileName = '/proj/index.ts';
     // Two newly-introduced errors; the directive on the middle line marks the
-    // second statement, so it should come back as `marked` migration debt.
+    // second statement, so only that one is "marked debt".
     const content = ['const a = obj[0];', '// @ts-migrating', 'const b = obj[1];', ''].join('\n');
     const sourceFile = sourceFileOf(fileName, content);
 
@@ -101,15 +100,9 @@ describe('createTsMigratingProxyLanguageService', () => {
       messageText: `'${needle}' is possibly 'undefined'.`,
     });
 
-    const buildReportProxy = ({
-      baseline,
-      targetErrors = [errorAt('obj[0]'), errorAt('obj[1]')],
-    }: {
-      baseline: ts.Diagnostic[];
-      targetErrors?: ts.Diagnostic[];
-    }) => {
+    const buildMarkedDebtProxy = () => {
       const fromLanguageService = {
-        getSemanticDiagnostics: () => baseline,
+        getSemanticDiagnostics: () => [],
         getTodoComments: () => [
           {
             descriptor: { text: DIRECTIVE, priority: 0 },
@@ -123,77 +116,46 @@ describe('createTsMigratingProxyLanguageService', () => {
       } as unknown as ts.LanguageService;
 
       const toLanguageService = {
-        getSemanticDiagnostics: () => [...baseline, ...targetErrors],
+        getSemanticDiagnostics: () => [errorAt('obj[0]'), errorAt('obj[1]')],
       } as unknown as ts.LanguageService;
 
       return createTsMigratingProxyLanguageService({ ts, fromLanguageService, toLanguageService });
     };
 
-    it('partitions diagnostics into baseline, unmarked and marked', () => {
-      const baseline = [errorAt('const a')];
-      const report = buildReportProxy({ baseline }).getTsMigratingReport(fileName);
-
-      const summarise = (origin: 'baseline' | 'ts-migrating', marked: boolean) =>
-        report
-          .filter(e => e.origin === origin && e.markedWithTsMigratingDirective === marked)
-          .map(e => e.diagnostic.start);
-
-      // baseline error passes through untouched
-      expect(summarise('baseline', false)).toEqual([content.indexOf('const a')]);
-      // `obj[0]` has no directive -> unmarked (this is what `check` fails on)
-      expect(summarise('ts-migrating', false)).toEqual([content.indexOf('obj[0]')]);
-      // `obj[1]` sits under the directive -> marked debt, and it keeps its code
-      expect(summarise('ts-migrating', true)).toEqual([content.indexOf('obj[1]')]);
-      expect(report.find(e => e.markedWithTsMigratingDirective)?.diagnostic.code).toBe(18048);
+    it('returns newly-introduced errors on @ts-migrating-marked lines, with codes', () => {
+      const marked = buildMarkedDebtProxy().getTsMigratingMarkedDebt(fileName);
+      // only `obj[1]` (under the directive) is marked debt; `obj[0]` is unmarked
+      expect(marked.map(d => d.start)).toEqual([content.indexOf('obj[1]')]);
+      expect(marked[0]?.code).toBe(18048);
     });
 
-    it('marked entries are exactly the ones hidden from getSemanticDiagnostics', () => {
-      const proxy = buildReportProxy({ baseline: [] });
+    it('exposes exactly what getSemanticDiagnostics hides', () => {
+      const proxy = buildMarkedDebtProxy();
+      const shownToEditor = proxy.getSemanticDiagnostics(fileName).filter(isPluginDiagnostic);
+      const markedDebt = proxy.getTsMigratingMarkedDebt(fileName);
 
-      const reportedToEditor = proxy.getSemanticDiagnostics(fileName).filter(isPluginDiagnostic);
-      const marked = proxy
-        .getTsMigratingReport(fileName)
-        .filter(e => e.markedWithTsMigratingDirective);
-
-      // the editor/CLI sees only the single unmarked error...
-      expect(reportedToEditor).toHaveLength(1);
-      // ...while the report additionally exposes the suppressed (marked) one.
-      expect(marked).toHaveLength(1);
+      // the editor/CLI sees only the unmarked error; the marked one is suppressed...
+      expect(shownToEditor).toHaveLength(1);
+      // ...and surfaced only via getTsMigratingMarkedDebt.
+      expect(markedDebt).toHaveLength(1);
     });
 
-    it('includes unused @ts-migrating directives so the JSON gate matches `check`', () => {
-      // obj[1] no longer errors under the target config, so the directive on its
-      // line is now unused — the default reporter fails on this, so the report
-      // must surface it too.
-      const report = buildReportProxy({
-        baseline: [],
-        targetErrors: [errorAt('obj[0]')],
-      }).getTsMigratingReport(fileName);
-
-      const unused = report.filter(e => e.diagnostic.code === UNUSED_DIRECTIVE_DIAGNOSTIC_CODE);
-      expect(unused).toHaveLength(1);
-      expect(unused[0]?.origin).toBe('ts-migrating');
-      expect(unused[0]?.markedWithTsMigratingDirective).toBe(false);
-    });
-
-    // A later plugin in the chain may re-wrap our service by copying its
-    // enumerable keys (the TS plugin-wiki pattern). `getTsMigratingReport` must
-    // survive that, or `check --reporter json` would crash downstream.
-    it('exposes getTsMigratingReport to own-key enumeration and copy-wrapping', () => {
-      const proxy = buildReportProxy({ baseline: [] });
-      expect(Object.keys(proxy)).toContain('getTsMigratingReport');
+    // A later plugin may re-wrap our service by copying its enumerable keys (the
+    // TS plugin-wiki pattern); the custom accessor must survive that or
+    // `check --reporter json` would crash downstream.
+    it('exposes getTsMigratingMarkedDebt to own-key enumeration and copy-wrapping', () => {
+      const proxy = buildMarkedDebtProxy();
+      expect(Object.keys(proxy)).toContain('getTsMigratingMarkedDebt');
 
       const rewrapped = Object.fromEntries(
         Object.keys(proxy).map(key => {
           const value = (proxy as unknown as Record<string, unknown>)[key];
           return [key, typeof value === 'function' ? value.bind(proxy) : value];
         }),
-      ) as unknown as ts.LanguageService & {
-        getTsMigratingReport: (fileName: string) => unknown[];
-      };
+      ) as unknown as { getTsMigratingMarkedDebt: (fileName: string) => unknown[] };
 
-      expect(typeof rewrapped.getTsMigratingReport).toBe('function');
-      expect(rewrapped.getTsMigratingReport(fileName).length).toBeGreaterThan(0);
+      expect(typeof rewrapped.getTsMigratingMarkedDebt).toBe('function');
+      expect(rewrapped.getTsMigratingMarkedDebt(fileName).length).toBeGreaterThan(0);
     });
   });
 

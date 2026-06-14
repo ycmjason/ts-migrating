@@ -11,29 +11,14 @@ import {
   serializeDiagnostic,
 } from './utils/diagnostics';
 
-/** Which config surfaced a diagnostic. */
-export type DiagnosticOrigin =
-  /** Introduced by the tsconfig you are migrating *to* (the plugin's config). */
-  | 'ts-migrating'
-  /** Already present under your current tsconfig — would fail `tsc` today. */
-  | 'baseline';
-
-/** A single diagnostic, annotated with how ts-migrating sees it. */
-export type TsMigratingReportEntry = {
-  diagnostic: TsServerLibrary.Diagnostic;
-  origin: DiagnosticOrigin;
-  /**
-   * `true` when this is a `ts-migrating` error sitting on a line marked with a
-   * `@ts-migrating` directive — i.e. acknowledged migration debt that `check`
-   * deliberately suppresses. Always `false` for `baseline` errors (directives
-   * do not suppress those).
-   */
-  markedWithTsMigratingDirective: boolean;
-};
-
-/** The base `LanguageService` plus ts-migrating's own reporting accessor. */
+/**
+ * The base `LanguageService` plus ts-migrating's accessor for the *marked* debt:
+ * the errors the target config introduces on lines annotated with
+ * `@ts-migrating`. These are deliberately suppressed from `getSemanticDiagnostics`
+ * (so editors stay quiet), so the report reads them from here.
+ */
 export type TsMigratingLanguageService = TsServerLibrary.LanguageService & {
-  getTsMigratingReport: (fileName: string) => TsMigratingReportEntry[];
+  getTsMigratingMarkedDebt: (fileName: string) => TsServerLibrary.Diagnostic[];
 };
 
 export const createTsMigratingProxyLanguageService = ({
@@ -52,8 +37,9 @@ export const createTsMigratingProxyLanguageService = ({
    *   *adds*, partitioned into `unmarked`/`marked` by `@ts-migrating` directives,
    *   plus the synthetic `unusedDirectives` warnings.
    *
-   * Both `getSemanticDiagnostics` and `getTsMigratingReport` build on this, so
-   * each call runs the expensive second type-check exactly once.
+   * Both `getSemanticDiagnostics` and `getTsMigratingMarkedDebt` build on this.
+   * The expensive target-config type-check is cached by the language service, so
+   * calling both for a file doesn't re-run it.
    */
   const analyzeFile = (fileName: string) => {
     const baseline = fromLanguageService.getSemanticDiagnostics(fileName);
@@ -132,45 +118,9 @@ export const createTsMigratingProxyLanguageService = ({
 
       return [...baseline, ...pluginDiagnostics];
     },
-    getTsMigratingReport: (fileName: string) => {
-      const { baseline, plugin } = analyzeFile(fileName);
-
-      const entries: TsMigratingReportEntry[] = baseline.map(diagnostic => ({
-        diagnostic,
-        origin: 'baseline' as const,
-        markedWithTsMigratingDirective: false,
-      }));
-
-      if (plugin) {
-        for (const diagnostic of plugin.unmarked) {
-          entries.push({
-            diagnostic,
-            origin: 'ts-migrating',
-            markedWithTsMigratingDirective: false,
-          });
-        }
-        for (const diagnostic of plugin.marked) {
-          entries.push({
-            diagnostic,
-            origin: 'ts-migrating',
-            markedWithTsMigratingDirective: true,
-          });
-        }
-        // Stale `@ts-migrating` directives aren't type errors, but the default
-        // reporter (via `getSemanticDiagnostics`) fails on them. Surface them
-        // here too — as unmarked `ts-migrating` entries carrying
-        // `UNUSED_DIRECTIVE_DIAGNOSTIC_CODE` — so the report is a faithful
-        // superset of the standard diagnostics and the JSON gate stays in parity.
-        for (const diagnostic of plugin.unusedDirectives) {
-          entries.push({
-            diagnostic,
-            origin: 'ts-migrating',
-            markedWithTsMigratingDirective: false,
-          });
-        }
-      }
-
-      return entries;
-    },
+    // The newly-introduced errors on `@ts-migrating`-annotated lines. They're
+    // suppressed from `getSemanticDiagnostics` (so editors stay quiet), so the
+    // report reads them from here to surface acknowledged migration debt.
+    getTsMigratingMarkedDebt: (fileName: string) => analyzeFile(fileName).plugin?.marked ?? [],
   });
 };
