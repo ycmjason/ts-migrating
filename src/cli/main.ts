@@ -31,10 +31,10 @@ const args = applyMaxOldSpaceSize();
                 },
                 reporter: {
                   kind: 'enum',
-                  values: ['default', 'json', 'ndjson'],
+                  values: ['pretty', 'json', 'ndjson'],
                   brief:
-                    'Output format. "json" prints a flat JSON array of every diagnostic (origin + @ts-migrating directive info) for CI gates / dashboards; "ndjson" streams the same records one JSON object per line for large repos.',
-                  default: 'default',
+                    'Output format. "pretty" (default) prints human-readable diagnostics with colour and context; "json" prints a flat JSON array of every diagnostic (origin + @ts-migrating directive info) for CI gates / dashboards; "ndjson" streams the same records one JSON object per line for large repos.',
+                  default: 'pretty',
                 },
               },
               aliases: {

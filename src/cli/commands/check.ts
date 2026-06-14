@@ -6,7 +6,7 @@ import { isPluginDiagnostic } from '../../api/isPluginDiagnostic';
 import { getPluginEnabledTSFilePaths } from '../ops/getPluginEnabledTSFilePaths';
 import { type JsonReportRow, toJsonReportRow } from '../reporters/jsonReport';
 
-export type Reporter = 'default' | 'json' | 'ndjson';
+export type Reporter = 'pretty' | 'json' | 'ndjson';
 
 export const check = async (
   {
@@ -19,10 +19,10 @@ export const check = async (
   if (reporter === 'json' || reporter === 'ndjson') {
     return checkJsonReporter({ verbose, allTypeErrors, format: reporter }, ...inputPaths);
   }
-  return checkDefaultReporter({ verbose, allTypeErrors }, ...inputPaths);
+  return checkPrettyReporter({ verbose, allTypeErrors }, ...inputPaths);
 };
 
-const checkDefaultReporter = (
+const checkPrettyReporter = (
   { verbose, allTypeErrors: isCheckingAllTypeErrors }: { verbose: boolean; allTypeErrors: boolean },
   ...inputPaths: string[]
 ) => {
@@ -83,7 +83,7 @@ const checkDefaultReporter = (
 /**
  * Emits every diagnostic — each tagged with its `origin` (`ts-migrating` vs
  * `baseline`) and whether a `@ts-migrating` directive marks it — for CI gates
- * and dashboards to consume. Unlike the default reporter this also surfaces
+ * and dashboards to consume. Unlike the pretty reporter this also surfaces
  * *marked* errors (the migration debt), which `check` normally hides.
  *
  * `json` buffers a single pretty-printed array; `ndjson` streams one JSON object
@@ -144,7 +144,7 @@ const checkJsonReporter = async (
     await write(`${JSON.stringify(rows, null, 2)}\n`);
   }
 
-  // Mirror the default reporter's gate so the same command can both emit a report
+  // Mirror the pretty reporter's gate so the same command can both emit a report
   // and gate CI: unmarked ts-migrating errors fail, and with `--all-type-errors`
   // pre-existing (baseline) errors fail too. Marked errors are acknowledged debt
   // and never fail.
