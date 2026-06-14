@@ -1,4 +1,5 @@
 import { jsonReporter } from './json';
+import { ndjsonReporter } from './ndjson';
 import { prettyReporter } from './pretty';
 
 type ReporterFn = (
@@ -8,13 +9,12 @@ type ReporterFn = (
 
 /**
  * Maps each `--reporter` value to its implementation, so the `check` command can
- * dispatch with a lookup instead of a conditional. `json`/`ndjson` share one
- * reporter and only differ by the `format` they pass.
+ * dispatch with a lookup instead of a conditional.
  */
 export const reporters = {
   pretty: prettyReporter,
-  json: (options, ...inputPaths) => jsonReporter({ ...options, format: 'json' }, ...inputPaths),
-  ndjson: (options, ...inputPaths) => jsonReporter({ ...options, format: 'ndjson' }, ...inputPaths),
+  json: jsonReporter,
+  ndjson: ndjsonReporter,
 } satisfies Record<string, ReporterFn>;
 
 export type ReporterName = keyof typeof reporters;
