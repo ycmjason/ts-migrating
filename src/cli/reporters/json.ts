@@ -12,10 +12,13 @@ export const jsonReporter = (
   ...inputPaths: string[]
 ): ReportTally => {
   const cwd = process.cwd();
+  const { entries, tally } = runReport({ verbose }, inputPaths);
+
   const items: ReportItem[] = [];
-  const tally = runReport({ verbose }, inputPaths, entry => {
+  for (const entry of entries) {
     items.push(toReportItem(entry, { cwd }));
-  });
+  }
   console.log(JSON.stringify(items, null, 2));
+
   return tally;
 };

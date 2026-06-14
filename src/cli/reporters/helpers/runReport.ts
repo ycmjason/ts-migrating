@@ -10,38 +10,40 @@ export type ReportTally = {
 };
 
 /**
- * Shared engine behind the reporters: discover plugin-enabled files and pass
- * every diagnostic (as a {@link TsMigratingReportEntry}) to `onEntry` — a
- * reporter decides what to do with each (flatten and serialize it for
- * json/ndjson, format it for pretty, …).
+ * Shared engine behind the reporters. Returns a lazy `entries` stream over every
+ * diagnostic (so we never hold them all in memory — see
+ * https://github.com/ycmjason/ts-migrating/issues/16) plus a `tally` that is
+ * filled in *as `entries` is consumed*.
  *
- * Returns the {@link ReportTally}; deciding the exit code from it is the `check`
- * command's job, so the gate lives in one obvious place. Progress is logged to
- * stderr so a reporter can keep stdout clean.
+ * So a reporter just `for…of`s `entries` to produce its output, then reads
+ * `tally` — which `check` uses to decide the exit code. Read `tally` only after
+ * iterating, since that's when it's complete.
+ *
+ * Progress is logged to stderr so a reporter can keep stdout clean.
  */
 export const runReport = (
   { verbose }: { verbose: boolean },
   inputPaths: string[],
-  onEntry: (entry: TsMigratingReportEntry) => void,
-): ReportTally => {
-  const pluginEnabledFiles = getPluginEnabledTSFilePaths(inputPaths, {
-    verbose,
-    log: console.error,
-  });
+): { entries: Iterable<TsMigratingReportEntry>; tally: ReportTally } => {
+  const tally: ReportTally = { unmarkedTsMigratingErrorCount: 0, baselineErrorCount: 0 };
 
-  let unmarkedTsMigratingErrorCount = 0;
-  let baselineErrorCount = 0;
+  function* entries(): Generator<TsMigratingReportEntry> {
+    const pluginEnabledFiles = getPluginEnabledTSFilePaths(inputPaths, {
+      verbose,
+      log: console.error,
+    });
 
-  for (const file of pluginEnabledFiles) {
-    for (const entry of getTsMigratingReportForFile(file)) {
-      if (entry.origin === 'baseline') {
-        baselineErrorCount += 1;
-      } else if (!entry.markedWithTsMigratingDirective) {
-        unmarkedTsMigratingErrorCount += 1;
+    for (const file of pluginEnabledFiles) {
+      for (const entry of getTsMigratingReportForFile(file)) {
+        if (entry.origin === 'baseline') {
+          tally.baselineErrorCount += 1;
+        } else if (!entry.markedWithTsMigratingDirective) {
+          tally.unmarkedTsMigratingErrorCount += 1;
+        }
+        yield entry;
       }
-      onEntry(entry);
     }
   }
 
-  return { unmarkedTsMigratingErrorCount, baselineErrorCount };
+  return { entries: entries(), tally };
 };

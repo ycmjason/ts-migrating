@@ -14,9 +14,9 @@ const FORMAT_HOST: ts.FormatDiagnosticsHost = {
  * (like `tsc --pretty`) followed by a summary. This is the default `check`
  * output.
  *
- * Built on {@link runReport}: it skips marked debt, shows only `ts-migrating`
- * errors by default (`--all-type-errors` adds baseline ones), and re-brands
- * `ts-migrating` diagnostics so they read as `[ts-migrating]`.
+ * Skips marked debt, shows only `ts-migrating` errors by default
+ * (`--all-type-errors` adds baseline ones), and re-brands `ts-migrating`
+ * diagnostics so they read as `[ts-migrating]`.
  */
 export const prettyReporter = (
   { verbose, allTypeErrors }: { verbose: boolean; allTypeErrors: boolean },
@@ -28,17 +28,18 @@ export const prettyReporter = (
   console.log();
 
   console.time('Type checking duration');
-  const tally = runReport({ verbose }, inputPaths, entry => {
+  const { entries, tally } = runReport({ verbose }, inputPaths);
+  for (const entry of entries) {
     // Acknowledged debt is never shown.
-    if (entry.markedWithTsMigratingDirective) return;
+    if (entry.markedWithTsMigratingDirective) continue;
     // Default view is [ts-migrating] errors only; -a also shows baseline errors.
-    if (!allTypeErrors && entry.origin === 'baseline') return;
+    if (!allTypeErrors && entry.origin === 'baseline') continue;
     // Brand ts-migrating errors so they read as `[ts-migrating]`; baseline
     // errors are real `tsc` errors and stay as-is.
     const diagnostic =
       entry.origin === 'ts-migrating' ? brandifyDiagnostic(entry.diagnostic) : entry.diagnostic;
     console.log(ts.formatDiagnosticsWithColorAndContext([diagnostic], FORMAT_HOST));
-  });
+  }
   console.timeEnd('Type checking duration');
 
   const { unmarkedTsMigratingErrorCount, baselineErrorCount } = tally;

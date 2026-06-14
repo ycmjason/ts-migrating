@@ -12,7 +12,11 @@ export const ndjsonReporter = (
   ...inputPaths: string[]
 ): ReportTally => {
   const cwd = process.cwd();
-  return runReport({ verbose }, inputPaths, entry => {
+  const { entries, tally } = runReport({ verbose }, inputPaths);
+
+  for (const entry of entries) {
     console.log(JSON.stringify(toReportItem(entry, { cwd })));
-  });
+  }
+
+  return tally;
 };
