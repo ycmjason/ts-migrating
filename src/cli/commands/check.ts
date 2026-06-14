@@ -89,20 +89,31 @@ const checkDefaultReporter = (
  * `json` buffers a single pretty-printed array; `ndjson` streams one JSON object
  * per line so large repos never hold the whole report in memory on either side.
  */
-const checkJsonReporter = (
+const checkJsonReporter = async (
   {
     verbose,
     allTypeErrors,
     format,
   }: { verbose: boolean; allTypeErrors: boolean; format: 'json' | 'ndjson' },
   ...inputPaths: string[]
-): void => {
+): Promise<void> => {
   // stdout must contain only the report, so divert all progress chatter
   // (here and inside `getPluginEnabledTSFilePaths`) to stderr.
   const pluginEnabledFiles = getPluginEnabledTSFilePaths(inputPaths, {
     verbose,
     log: console.error,
   });
+
+  // Write a chunk, honouring backpressure: when stdout's buffer is full,
+  // `write` returns false and we wait for `drain` before producing more. Without
+  // this a slow consumer would make Node buffer the entire report in memory,
+  // defeating the point of streaming ndjson. See
+  // https://github.com/ycmjason/ts-migrating/issues/16
+  const write = async (chunk: string): Promise<void> => {
+    if (!process.stdout.write(chunk)) {
+      await new Promise<void>(resolve => process.stdout.once('drain', resolve));
+    }
+  };
 
   const cwd = process.cwd();
   // `ndjson` streams rows out immediately and never retains them; `json` collects
@@ -122,7 +133,7 @@ const checkJsonReporter = (
       }
 
       if (format === 'ndjson') {
-        process.stdout.write(`${JSON.stringify(row)}\n`);
+        await write(`${JSON.stringify(row)}\n`);
       } else {
         rows.push(row);
       }
@@ -130,7 +141,7 @@ const checkJsonReporter = (
   }
 
   if (format === 'json') {
-    process.stdout.write(`${JSON.stringify(rows, null, 2)}\n`);
+    await write(`${JSON.stringify(rows, null, 2)}\n`);
   }
 
   // Mirror the default reporter's gate so the same command can both emit a report
@@ -141,7 +152,6 @@ const checkJsonReporter = (
     unmarkedTsMigratingErrorCount > 0 || (allTypeErrors && baselineErrorCount > 0);
 
   // Force-exit (the TS server keeps the event loop alive), but only once stdout
-  // has drained — on large repos the output can exceed the OS pipe buffer, and
-  // exiting mid-write would truncate it.
+  // has fully flushed, so the last rows can't be truncated.
   process.stdout.write('', () => process.exit(hasBlockingErrors ? 1 : 0));
 };
