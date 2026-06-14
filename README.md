@@ -54,7 +54,7 @@ The philosophy behind the plugin follows three simple steps:
    * `ts-migrating check`
 
      * Run `@ts-migrating`-aware type checking using your new `tsconfig`.
-     * Pass `--reporter json` to emit a machine-readable report for CI gates and dashboards (see [📊 JSON reporting](#-json-reporting)).
+     * Pass `--reporter json` (or `ndjson`) to emit a machine-readable report for CI gates and dashboards (see [📊 JSON reporting](#-json-reporting)).
    * `ts-migrating annotate`
 
      * Automatically mark all errors caused by your new `tsconfig` with `@ts-migrating`.

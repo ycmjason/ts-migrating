@@ -53,7 +53,7 @@ export const createTsMigratingProxyLanguageService = ({
    *   plus the synthetic `unusedDirectives` warnings.
    *
    * Both `getSemanticDiagnostics` and `getTsMigratingReport` build on this, so
-   * the expensive second type-check happens once per call site.
+   * each call runs the expensive second type-check exactly once.
    */
   const analyzeFile = (fileName: string) => {
     const baseline = fromLanguageService.getSemanticDiagnostics(fileName);
