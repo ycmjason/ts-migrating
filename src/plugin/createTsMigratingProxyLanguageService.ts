@@ -156,6 +156,18 @@ export const createTsMigratingProxyLanguageService = ({
             markedWithTsMigratingDirective: true,
           });
         }
+        // Stale `@ts-migrating` directives aren't type errors, but the default
+        // reporter (via `getSemanticDiagnostics`) fails on them. Surface them
+        // here too — as unmarked `ts-migrating` entries carrying
+        // `UNUSED_DIRECTIVE_DIAGNOSTIC_CODE` — so the report is a faithful
+        // superset of the standard diagnostics and the JSON gate stays in parity.
+        for (const diagnostic of plugin.unusedDirectives) {
+          entries.push({
+            diagnostic,
+            origin: 'ts-migrating',
+            markedWithTsMigratingDirective: false,
+          });
+        }
       }
 
       return entries;

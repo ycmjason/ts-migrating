@@ -178,11 +178,15 @@ This gives you everything to build your own metrics, for example:
 npx ts-migrating check --reporter json | jq '[.[] | select(.markedWithTsMigratingDirective)] | length'
 
 # unmarked ts-migrating errors grouped by error code
+# (filter *before* grouping so marked debt and baseline errors don't leak in)
 npx ts-migrating check --reporter json \
-  | jq 'group_by(.code)[] | select(.[0].origin == "ts-migrating") | { code: .[0].code, count: length }'
+  | jq 'map(select(.origin == "ts-migrating" and (.markedWithTsMigratingDirective | not)))
+        | group_by(.code)[] | { code: .[0].code, count: length }'
 ```
 
 > ℹ️ The command still exits non-zero when there are *unmarked* `ts-migrating` errors (and, with `--all-type-errors`, when there are pre-existing `baseline` errors), so it can both gate CI and produce the report. The JSON is printed regardless of the exit code.
+
+> ℹ️ Stale (unused) `@ts-migrating` directives are reported too — as unmarked `ts-migrating` rows with code `555` — so the JSON gate fails on them exactly like the default `check`. Filter them out with `select(.code != 555)` if you only want real type errors.
 
 ## API
 

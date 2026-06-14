@@ -2,6 +2,7 @@ import ts from 'typescript/lib/tsserverlibrary';
 import { describe, expect, it, vi } from 'vitest';
 import { isPluginDiagnostic } from '../api/isPluginDiagnostic';
 import { DIRECTIVE } from './constants/DIRECTIVE';
+import { UNUSED_DIRECTIVE_DIAGNOSTIC_CODE } from './constants/UNUSED_DIRECTIVE_DIAGNOSTIC_CODE';
 import { createTsMigratingProxyLanguageService } from './createTsMigratingProxyLanguageService';
 
 const sourceFileOf = (fileName: string, content: string): ts.SourceFile =>
@@ -100,7 +101,13 @@ describe('createTsMigratingProxyLanguageService', () => {
       messageText: `'${needle}' is possibly 'undefined'.`,
     });
 
-    const buildReportProxy = ({ baseline }: { baseline: ts.Diagnostic[] }) => {
+    const buildReportProxy = ({
+      baseline,
+      targetErrors = [errorAt('obj[0]'), errorAt('obj[1]')],
+    }: {
+      baseline: ts.Diagnostic[];
+      targetErrors?: ts.Diagnostic[];
+    }) => {
       const fromLanguageService = {
         getSemanticDiagnostics: () => baseline,
         getTodoComments: () => [
@@ -116,7 +123,7 @@ describe('createTsMigratingProxyLanguageService', () => {
       } as unknown as ts.LanguageService;
 
       const toLanguageService = {
-        getSemanticDiagnostics: () => [...baseline, errorAt('obj[0]'), errorAt('obj[1]')],
+        getSemanticDiagnostics: () => [...baseline, ...targetErrors],
       } as unknown as ts.LanguageService;
 
       return createTsMigratingProxyLanguageService({ ts, fromLanguageService, toLanguageService });
@@ -152,6 +159,21 @@ describe('createTsMigratingProxyLanguageService', () => {
       expect(reportedToEditor).toHaveLength(1);
       // ...while the report additionally exposes the suppressed (marked) one.
       expect(marked).toHaveLength(1);
+    });
+
+    it('includes unused @ts-migrating directives so the JSON gate matches `check`', () => {
+      // obj[1] no longer errors under the target config, so the directive on its
+      // line is now unused — the default reporter fails on this, so the report
+      // must surface it too.
+      const report = buildReportProxy({
+        baseline: [],
+        targetErrors: [errorAt('obj[0]')],
+      }).getTsMigratingReport(fileName);
+
+      const unused = report.filter(e => e.diagnostic.code === UNUSED_DIRECTIVE_DIAGNOSTIC_CODE);
+      expect(unused).toHaveLength(1);
+      expect(unused[0]?.origin).toBe('ts-migrating');
+      expect(unused[0]?.markedWithTsMigratingDirective).toBe(false);
     });
   });
 
