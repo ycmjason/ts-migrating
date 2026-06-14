@@ -146,10 +146,11 @@ In your existing `tsconfig.json`, add the plugin:
 For CI gates and dashboards, `check` can emit a machine-readable report instead of the human-readable output:
 
 ```bash
-npx ts-migrating check --reporter json
+npx ts-migrating check --reporter json    # one JSON array
+npx ts-migrating check --reporter ndjson  # one JSON object per line (streamable)
 ```
 
-`stdout` is a flat JSON array with **one entry per diagnostic** (progress logs go to `stderr`, so `stdout` stays pure JSON). The flat shape is easy to `jq`/group/count or convert to CSV:
+`stdout` carries **one entry per diagnostic** (progress logs go to `stderr`, so `stdout` stays pure). The flat shape is easy to `jq`/group/count or convert to CSV. With `json` you get a single array:
 
 ```jsonc
 [
@@ -167,6 +168,8 @@ npx ts-migrating check --reporter json
 ]
 ```
 
+`--reporter ndjson` emits the exact same records, but one JSON object per line ([NDJSON](https://github.com/ndjson/ndjson-spec)) instead of an array. Prefer it on large repos: it streams (neither `ts-migrating` nor your consumer has to hold the whole report in memory) and pipes line-by-line into `jq -c`, `grep`, or `wc -l`.
+
 This gives you everything to build your own metrics, for example:
 
 * **Track remaining migration debt** — count entries where `markedWithTsMigratingDirective` is `true`. This is the number that trends down to zero as you migrate (the unmarked ones are kept at `0` by your CI gate).
@@ -182,6 +185,10 @@ npx ts-migrating check --reporter json | jq '[.[] | select(.markedWithTsMigratin
 npx ts-migrating check --reporter json \
   | jq 'map(select(.origin == "ts-migrating" and (.markedWithTsMigratingDirective | not)))
         | group_by(.code)[] | { code: .[0].code, count: length }'
+
+# streaming: count remaining debt line-by-line, nothing held in memory
+npx ts-migrating check --reporter ndjson \
+  | jq -c 'select(.markedWithTsMigratingDirective)' | wc -l
 ```
 
 > ℹ️ The command still exits non-zero when there are *unmarked* `ts-migrating` errors (and, with `--all-type-errors`, when there are pre-existing `baseline` errors), so it can both gate CI and produce the report. The JSON is printed regardless of the exit code.

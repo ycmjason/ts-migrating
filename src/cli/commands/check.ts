@@ -6,7 +6,7 @@ import { isPluginDiagnostic } from '../../api/isPluginDiagnostic';
 import { getPluginEnabledTSFilePaths } from '../ops/getPluginEnabledTSFilePaths';
 import { type JsonReportRow, toJsonReportRow } from '../reporters/jsonReport';
 
-export type Reporter = 'default' | 'json';
+export type Reporter = 'default' | 'json' | 'ndjson';
 
 export const check = async (
   {
@@ -16,8 +16,8 @@ export const check = async (
   }: { verbose: boolean; allTypeErrors: boolean; reporter: Reporter },
   ...inputPaths: string[]
 ) => {
-  if (reporter === 'json') {
-    return checkJsonReporter({ verbose, allTypeErrors }, ...inputPaths);
+  if (reporter === 'json' || reporter === 'ndjson') {
+    return checkJsonReporter({ verbose, allTypeErrors, format: reporter }, ...inputPaths);
   }
   return checkDefaultReporter({ verbose, allTypeErrors }, ...inputPaths);
 };
@@ -81,17 +81,23 @@ const checkDefaultReporter = (
 };
 
 /**
- * Emits a flat JSON array of every diagnostic — each tagged with its `origin`
- * (`ts-migrating` vs `baseline`) and whether a `@ts-migrating` directive marks
- * it — for CI gates and dashboards to consume. Unlike the default reporter this
- * also surfaces *marked* errors (the migration debt), which `check` normally
- * hides.
+ * Emits every diagnostic — each tagged with its `origin` (`ts-migrating` vs
+ * `baseline`) and whether a `@ts-migrating` directive marks it — for CI gates
+ * and dashboards to consume. Unlike the default reporter this also surfaces
+ * *marked* errors (the migration debt), which `check` normally hides.
+ *
+ * `json` buffers a single pretty-printed array; `ndjson` streams one JSON object
+ * per line so large repos never hold the whole report in memory on either side.
  */
 const checkJsonReporter = (
-  { verbose, allTypeErrors }: { verbose: boolean; allTypeErrors: boolean },
+  {
+    verbose,
+    allTypeErrors,
+    format,
+  }: { verbose: boolean; allTypeErrors: boolean; format: 'json' | 'ndjson' },
   ...inputPaths: string[]
 ): void => {
-  // stdout must contain only the JSON document, so divert all progress chatter
+  // stdout must contain only the report, so divert all progress chatter
   // (here and inside `getPluginEnabledTSFilePaths`) to stderr.
   const pluginEnabledFiles = getPluginEnabledTSFilePaths(inputPaths, {
     verbose,
@@ -99,21 +105,32 @@ const checkJsonReporter = (
   });
 
   const cwd = process.cwd();
+  // `ndjson` streams rows out immediately and never retains them; `json` collects
+  // them to print one array at the end. Either way we only ever hold plain rows,
+  // not the diagnostics, so we stay within the memory budget from #16.
   const rows: JsonReportRow[] = [];
   let unmarkedTsMigratingErrorCount = 0;
   let baselineErrorCount = 0;
 
-  // Map each diagnostic to a plain row immediately and keep only the rows — never
-  // the diagnostics themselves — so we stay within the memory budget from #16.
   for (const file of pluginEnabledFiles) {
     for (const entry of getTsMigratingReportForFile(file)) {
-      rows.push(toJsonReportRow(entry, { cwd }));
+      const row = toJsonReportRow(entry, { cwd });
       if (entry.origin === 'baseline') {
         baselineErrorCount += 1;
       } else if (!entry.markedWithTsMigratingDirective) {
         unmarkedTsMigratingErrorCount += 1;
       }
+
+      if (format === 'ndjson') {
+        process.stdout.write(`${JSON.stringify(row)}\n`);
+      } else {
+        rows.push(row);
+      }
     }
+  }
+
+  if (format === 'json') {
+    process.stdout.write(`${JSON.stringify(rows, null, 2)}\n`);
   }
 
   // Mirror the default reporter's gate so the same command can both emit a report
@@ -123,10 +140,8 @@ const checkJsonReporter = (
   const hasBlockingErrors =
     unmarkedTsMigratingErrorCount > 0 || (allTypeErrors && baselineErrorCount > 0);
 
-  // Wait for stdout to drain before exiting. On large repos the JSON can exceed
-  // the OS pipe buffer, in which case `write` only queues it — exiting straight
-  // away would truncate the document into invalid JSON.
-  process.stdout.write(`${JSON.stringify(rows, null, 2)}\n`, () => {
-    process.exit(hasBlockingErrors ? 1 : 0);
-  });
+  // Force-exit (the TS server keeps the event loop alive), but only once stdout
+  // has drained — on large repos the output can exceed the OS pipe buffer, and
+  // exiting mid-write would truncate it.
+  process.stdout.write('', () => process.exit(hasBlockingErrors ? 1 : 0));
 };

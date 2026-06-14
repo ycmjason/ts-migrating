@@ -6,9 +6,9 @@ import type { DiagnosticOrigin, TsMigratingReportEntry } from '../../api/mod';
 type Position = { line: number; column: number };
 
 /**
- * One flat record per diagnostic — the `ts-migrating check --reporter json`
- * output is an array of these. Flat on purpose: trivial to group/sort/count, or
- * pipe onwards to CSV.
+ * One flat record per diagnostic — `ts-migrating check --reporter json` prints
+ * an array of these and `--reporter ndjson` prints one per line. Flat on
+ * purpose: trivial to group/sort/count, or pipe onwards to CSV.
  */
 export type JsonReportRow = {
   /** Path relative to the current working directory. */

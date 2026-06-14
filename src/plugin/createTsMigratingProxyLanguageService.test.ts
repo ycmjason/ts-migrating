@@ -175,6 +175,26 @@ describe('createTsMigratingProxyLanguageService', () => {
       expect(unused[0]?.origin).toBe('ts-migrating');
       expect(unused[0]?.markedWithTsMigratingDirective).toBe(false);
     });
+
+    // A later plugin in the chain may re-wrap our service by copying its
+    // enumerable keys (the TS plugin-wiki pattern). `getTsMigratingReport` must
+    // survive that, or `check --reporter json` would crash downstream.
+    it('exposes getTsMigratingReport to own-key enumeration and copy-wrapping', () => {
+      const proxy = buildReportProxy({ baseline: [] });
+      expect(Object.keys(proxy)).toContain('getTsMigratingReport');
+
+      const rewrapped = Object.fromEntries(
+        Object.keys(proxy).map(key => {
+          const value = (proxy as unknown as Record<string, unknown>)[key];
+          return [key, typeof value === 'function' ? value.bind(proxy) : value];
+        }),
+      ) as unknown as ts.LanguageService & {
+        getTsMigratingReport: (fileName: string) => unknown[];
+      };
+
+      expect(typeof rewrapped.getTsMigratingReport).toBe('function');
+      expect(rewrapped.getTsMigratingReport(fileName).length).toBeGreaterThan(0);
+    });
   });
 
   // https://github.com/ycmjason/ts-migrating/issues/16
