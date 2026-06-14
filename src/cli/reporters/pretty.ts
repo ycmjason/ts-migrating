@@ -1,56 +1,55 @@
 import process from 'node:process';
 import ts from 'typescript/lib/tsserverlibrary';
-import { getSemanticDiagnosticsForFile } from '../../api/getSemanticDiagnostics';
-import { isPluginDiagnostic } from '../../api/isPluginDiagnostic';
-import { getPluginEnabledTSFilePaths } from '../ops/getPluginEnabledTSFilePaths';
+import { brandifyDiagnostic } from '../../plugin/utils/diagnostics';
+import { runReport } from './helpers/runReport';
+
+const FORMAT_HOST: ts.FormatDiagnosticsHost = {
+  getCanonicalFileName: fileName => fileName,
+  getCurrentDirectory: () => process.cwd(),
+  getNewLine: () => ts.sys.newLine,
+};
 
 /**
  * Human-readable reporter: prints diagnostics with colour and source context
- * (like `tsc --pretty`) followed by a summary, and exits non-zero when there are
- * unmarked `ts-migrating` errors (or, with `allTypeErrors`, any type error).
+ * (like `tsc --pretty`) followed by a summary. This is the default `check`
+ * output.
  *
- * This is the default `check` output.
+ * Built on {@link runReport}: it skips marked debt, shows only `ts-migrating`
+ * errors by default (`--all-type-errors` adds baseline ones), and re-brands
+ * `ts-migrating` diagnostics so they read as `[ts-migrating]`. The exit code is
+ * handled by `runReport`.
  */
 export const prettyReporter = (
-  { verbose, allTypeErrors: isCheckingAllTypeErrors }: { verbose: boolean; allTypeErrors: boolean },
+  { verbose, allTypeErrors }: { verbose: boolean; allTypeErrors: boolean },
   ...inputPaths: string[]
-) => {
-  const pluginEnabledFiles = getPluginEnabledTSFilePaths(inputPaths, { verbose });
-
+): void => {
   console.log(
-    `⏳ Checking for ${isCheckingAllTypeErrors ? 'all TypeScript errors' : '[ts-migrating] plugin errors only'}...`,
+    `⏳ Checking for ${allTypeErrors ? 'all TypeScript errors' : '[ts-migrating] plugin errors only'}...`,
   );
-
   console.log();
 
-  // Keep running counts only. Holding on to every diagnostic for the whole run
-  // pins each one's `SourceFile` and message chain, which adds up to a lot of
-  // memory on large repos. See https://github.com/ycmjason/ts-migrating/issues/16
-  let totalErrorCount = 0;
-  let pluginErrorCount = 0;
-
   console.time('Type checking duration');
-  for (const file of pluginEnabledFiles) {
-    const diagnostics = getSemanticDiagnosticsForFile(file);
-    totalErrorCount += diagnostics.length;
-
-    const pluginDiagnostics = diagnostics.filter(isPluginDiagnostic);
-    pluginErrorCount += pluginDiagnostics.length;
-
-    const diagnosticsToReport = isCheckingAllTypeErrors ? diagnostics : pluginDiagnostics;
-    if (diagnosticsToReport.length > 0) {
-      console.log(
-        ts.formatDiagnosticsWithColorAndContext(diagnosticsToReport, {
-          getCanonicalFileName: fileName => fileName,
-          getCurrentDirectory: () => process.cwd(),
-          getNewLine: () => ts.sys.newLine,
-        }),
-      );
-    }
-  }
+  const { unmarkedTsMigratingErrorCount, baselineErrorCount } = runReport(
+    { verbose, allTypeErrors },
+    inputPaths,
+    {
+      onEntry: entry => {
+        // Acknowledged debt is never shown.
+        if (entry.markedWithTsMigratingDirective) return;
+        // Default view is [ts-migrating] errors only; -a also shows baseline errors.
+        if (!allTypeErrors && entry.origin === 'baseline') return;
+        // Brand ts-migrating errors so they read as `[ts-migrating]`; baseline
+        // errors are real `tsc` errors and stay as-is.
+        const diagnostic =
+          entry.origin === 'ts-migrating' ? brandifyDiagnostic(entry.diagnostic) : entry.diagnostic;
+        console.log(ts.formatDiagnosticsWithColorAndContext([diagnostic], FORMAT_HOST));
+      },
+    },
+  );
   console.timeEnd('Type checking duration');
 
-  if (isCheckingAllTypeErrors) {
+  if (allTypeErrors) {
+    const totalErrorCount = unmarkedTsMigratingErrorCount + baselineErrorCount;
     if (totalErrorCount > 0) {
       console.error(`❌ ${totalErrorCount} type error${totalErrorCount === 1 ? '' : 's'} found.`);
     } else {
@@ -58,15 +57,11 @@ export const prettyReporter = (
     }
   }
 
-  if (pluginErrorCount > 0) {
+  if (unmarkedTsMigratingErrorCount > 0) {
     console.error(
-      `❌ ${pluginErrorCount} unmarked plugin error${pluginErrorCount === 1 ? '' : 's'} found. Run \`npx ts-migrating annotate\` to automatically mark them!`,
+      `❌ ${unmarkedTsMigratingErrorCount} unmarked plugin error${unmarkedTsMigratingErrorCount === 1 ? '' : 's'} found. Run \`npx ts-migrating annotate\` to automatically mark them!`,
     );
   } else {
     console.log('✅ No unmarked plugin errors found.');
   }
-
-  // Set the exit code and let the process exit naturally (the project service
-  // holds no watchers, so nothing keeps the event loop alive).
-  process.exitCode = (isCheckingAllTypeErrors ? totalErrorCount : pluginErrorCount) > 0 ? 1 : 0;
 };
