@@ -5,7 +5,7 @@ import { prettyReporter } from './pretty';
 type ReporterFn = (
   options: { verbose: boolean; allTypeErrors: boolean },
   ...inputPaths: string[]
-) => void | Promise<void>;
+) => void;
 
 /**
  * Maps each `--reporter` value to its implementation, so the `check` command can

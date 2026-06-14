@@ -66,5 +66,7 @@ export const prettyReporter = (
     console.log('✅ No unmarked plugin errors found.');
   }
 
-  process.exit(Math.min(isCheckingAllTypeErrors ? totalErrorCount : pluginErrorCount, 1));
+  // Set the exit code and let the process exit naturally (the project service
+  // holds no watchers, so nothing keeps the event loop alive).
+  process.exitCode = (isCheckingAllTypeErrors ? totalErrorCount : pluginErrorCount) > 0 ? 1 : 0;
 };

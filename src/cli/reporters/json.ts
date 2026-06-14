@@ -1,4 +1,4 @@
-import { type ReportRow, runRowReporter, write } from './rowReporter';
+import { type ReportRow, runRowReporter } from './rowReporter';
 
 /**
  * Buffers every diagnostic into a single JSON array. Convenient for `jq '.'` and
@@ -8,12 +8,12 @@ import { type ReportRow, runRowReporter, write } from './rowReporter';
 export const jsonReporter = (
   options: { verbose: boolean; allTypeErrors: boolean },
   ...inputPaths: string[]
-): Promise<void> => {
+): void => {
   const rows: ReportRow[] = [];
-  return runRowReporter(options, inputPaths, {
+  runRowReporter(options, inputPaths, {
     onRow: row => {
       rows.push(row);
     },
-    onDone: () => write(`${JSON.stringify(rows, null, 2)}\n`),
+    onDone: () => console.log(JSON.stringify(rows, null, 2)),
   });
 };

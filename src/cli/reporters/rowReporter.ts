@@ -54,35 +54,25 @@ const toReportRow = (
 };
 
 /**
- * Backpressure-aware stdout write: when stdout's buffer is full, `write` returns
- * false and we wait for `drain` before producing more, so a slow consumer can't
- * make Node buffer the whole report in memory. See
- * https://github.com/ycmjason/ts-migrating/issues/16
- */
-export const write = async (chunk: string): Promise<void> => {
-  if (!process.stdout.write(chunk)) {
-    await new Promise<void>(resolve => process.stdout.once('drain', resolve));
-  }
-};
-
-/**
  * Shared engine for the row-based (json / ndjson) reporters: discover files,
  * turn every diagnostic into a {@link ReportRow} and hand it to `onRow`, then
- * run `onDone`, and finally exit with the same CI gate as the pretty reporter —
- * unmarked ts-migrating errors fail, and with `allTypeErrors` baseline errors do
- * too (marked debt never does). A reporter decides only *how* a row is written.
+ * run `onDone`. A reporter decides only *how* a row is written.
+ *
+ * We set `process.exitCode` and let the process exit naturally rather than
+ * calling `process.exit()`, so Node flushes stdout in full (no truncation) — the
+ * project service holds no watchers, so nothing keeps the event loop alive.
  */
-export const runRowReporter = async (
+export const runRowReporter = (
   { verbose, allTypeErrors }: { verbose: boolean; allTypeErrors: boolean },
   inputPaths: string[],
   {
     onRow,
     onDone,
   }: {
-    onRow: (row: ReportRow) => void | Promise<void>;
-    onDone?: () => void | Promise<void>;
+    onRow: (row: ReportRow) => void;
+    onDone?: () => void;
   },
-): Promise<void> => {
+): void => {
   // stdout must contain only the report, so divert all progress chatter
   // (here and inside `getPluginEnabledTSFilePaths`) to stderr.
   const pluginEnabledFiles = getPluginEnabledTSFilePaths(inputPaths, {
@@ -102,17 +92,15 @@ export const runRowReporter = async (
       } else if (!row.markedWithTsMigratingDirective) {
         unmarkedTsMigratingErrorCount += 1;
       }
-      await onRow(row);
+      onRow(row);
     }
   }
-  await onDone?.();
+  onDone?.();
 
-  const hasBlockingErrors =
-    unmarkedTsMigratingErrorCount > 0 || (allTypeErrors && baselineErrorCount > 0);
-
-  // Force-exit (the TS server keeps the event loop alive), but only once stdout
-  // has fully flushed, so the last rows can't be truncated.
-  process.stdout.write('', () => process.exit(hasBlockingErrors ? 1 : 0));
+  // Same CI gate as the pretty reporter: unmarked ts-migrating errors fail, and
+  // with `--all-type-errors` baseline errors do too. Marked debt never fails.
+  process.exitCode =
+    unmarkedTsMigratingErrorCount > 0 || (allTypeErrors && baselineErrorCount > 0) ? 1 : 0;
 };
 
 if (import.meta.vitest) {
