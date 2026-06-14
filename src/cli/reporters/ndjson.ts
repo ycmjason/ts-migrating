@@ -12,7 +12,7 @@ export const ndjsonReporter = (
   ...inputPaths: string[]
 ): void => {
   const cwd = process.cwd();
-  runReport(options, inputPaths, {
-    onEntry: entry => console.log(JSON.stringify(toReportItem(entry, { cwd }))),
+  runReport(options, inputPaths, entry => {
+    console.log(JSON.stringify(toReportItem(entry, { cwd })));
   });
 };

@@ -13,10 +13,8 @@ export const jsonReporter = (
 ): void => {
   const cwd = process.cwd();
   const items: ReportItem[] = [];
-  runReport(options, inputPaths, {
-    onEntry: entry => {
-      items.push(toReportItem(entry, { cwd }));
-    },
-    onDone: () => console.log(JSON.stringify(items, null, 2)),
+  runReport(options, inputPaths, entry => {
+    items.push(toReportItem(entry, { cwd }));
   });
+  console.log(JSON.stringify(items, null, 2));
 };

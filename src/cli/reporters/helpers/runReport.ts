@@ -11,28 +11,25 @@ export type ReportTally = {
 };
 
 /**
- * Shared engine behind the reporters: discover plugin-enabled files, hand each
- * diagnostic (as a {@link TsMigratingReportEntry}) to `onEntry`, run `onDone`,
- * set the CI gate exit code, and return the tallies for any summary. A reporter
- * decides what to do with each entry — flatten and serialize it (json/ndjson),
- * format it (pretty), etc.
+ * Shared engine behind the reporters: discover plugin-enabled files and pass
+ * every diagnostic (as a {@link TsMigratingReportEntry}) to `onEntry` — a
+ * reporter decides what to do with each (flatten and serialize it for
+ * json/ndjson, format it for pretty, …). Returns the tallies for any summary and
+ * sets the CI gate exit code: unmarked ts-migrating errors fail, and with
+ * `allTypeErrors` baseline errors do too (marked debt never fails).
  *
- * Progress is logged to stderr so a reporter is free to keep stdout clean.
+ * It's an eager function rather than a generator on purpose: the exit code is set
+ * unconditionally (a generator's would only run if the caller fully drained it),
+ * and the tally can be returned for `pretty`'s summary.
  *
- * We set `process.exitCode` and let the process exit naturally rather than
- * calling `process.exit()`, so Node flushes stdout in full — the project service
- * holds no watchers, so nothing keeps the event loop alive.
+ * Progress is logged to stderr so a reporter can keep stdout clean. We set
+ * `process.exitCode` rather than calling `process.exit()`, so Node flushes stdout
+ * in full — the project service holds no watchers, so nothing keeps the loop alive.
  */
 export const runReport = (
   { verbose, allTypeErrors }: { verbose: boolean; allTypeErrors: boolean },
   inputPaths: string[],
-  {
-    onEntry,
-    onDone,
-  }: {
-    onEntry: (entry: TsMigratingReportEntry) => void;
-    onDone?: () => void;
-  },
+  onEntry: (entry: TsMigratingReportEntry) => void,
 ): ReportTally => {
   const pluginEnabledFiles = getPluginEnabledTSFilePaths(inputPaths, {
     verbose,
@@ -52,10 +49,7 @@ export const runReport = (
       onEntry(entry);
     }
   }
-  onDone?.();
 
-  // Same CI gate as the pretty reporter: unmarked ts-migrating errors fail, and
-  // with `--all-type-errors` baseline errors do too. Marked debt never fails.
   process.exitCode =
     unmarkedTsMigratingErrorCount > 0 || (allTypeErrors && baselineErrorCount > 0) ? 1 : 0;
 

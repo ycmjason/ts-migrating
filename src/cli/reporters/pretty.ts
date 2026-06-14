@@ -32,18 +32,16 @@ export const prettyReporter = (
   const { unmarkedTsMigratingErrorCount, baselineErrorCount } = runReport(
     { verbose, allTypeErrors },
     inputPaths,
-    {
-      onEntry: entry => {
-        // Acknowledged debt is never shown.
-        if (entry.markedWithTsMigratingDirective) return;
-        // Default view is [ts-migrating] errors only; -a also shows baseline errors.
-        if (!allTypeErrors && entry.origin === 'baseline') return;
-        // Brand ts-migrating errors so they read as `[ts-migrating]`; baseline
-        // errors are real `tsc` errors and stay as-is.
-        const diagnostic =
-          entry.origin === 'ts-migrating' ? brandifyDiagnostic(entry.diagnostic) : entry.diagnostic;
-        console.log(ts.formatDiagnosticsWithColorAndContext([diagnostic], FORMAT_HOST));
-      },
+    entry => {
+      // Acknowledged debt is never shown.
+      if (entry.markedWithTsMigratingDirective) return;
+      // Default view is [ts-migrating] errors only; -a also shows baseline errors.
+      if (!allTypeErrors && entry.origin === 'baseline') return;
+      // Brand ts-migrating errors so they read as `[ts-migrating]`; baseline
+      // errors are real `tsc` errors and stay as-is.
+      const diagnostic =
+        entry.origin === 'ts-migrating' ? brandifyDiagnostic(entry.diagnostic) : entry.diagnostic;
+      console.log(ts.formatDiagnosticsWithColorAndContext([diagnostic], FORMAT_HOST));
     },
   );
   console.timeEnd('Type checking duration');
