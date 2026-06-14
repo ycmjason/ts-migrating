@@ -1,18 +1,10 @@
-import { jsonReporter } from '../reporters/json';
-import { prettyReporter } from '../reporters/pretty';
+import { type ReporterName, reporters } from '../reporters/mod';
 
-export type Reporter = 'pretty' | 'json' | 'ndjson';
-
-export const check = async (
+export const check = (
   {
     verbose,
     allTypeErrors,
     reporter,
-  }: { verbose: boolean; allTypeErrors: boolean; reporter: Reporter },
+  }: { verbose: boolean; allTypeErrors: boolean; reporter: ReporterName },
   ...inputPaths: string[]
-) => {
-  if (reporter === 'json' || reporter === 'ndjson') {
-    return jsonReporter({ verbose, allTypeErrors, format: reporter }, ...inputPaths);
-  }
-  return prettyReporter({ verbose, allTypeErrors }, ...inputPaths);
-};
+) => reporters[reporter]({ verbose, allTypeErrors }, ...inputPaths);
