@@ -42,7 +42,9 @@ export const toReportItem = (
   })();
 
   return {
-    file: sourceFile ? path.relative(cwd, sourceFile.fileName) : '',
+    // Normalise to forward slashes so rows line up across OSes (Windows
+    // `path.relative` would otherwise emit `src\one.ts`).
+    file: sourceFile ? path.relative(cwd, sourceFile.fileName).replaceAll(path.sep, '/') : '',
     position,
     code: diagnostic.code,
     message: ts.flattenDiagnosticMessageText(diagnostic.messageText, '\n'),
