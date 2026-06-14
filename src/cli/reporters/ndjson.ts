@@ -1,4 +1,4 @@
-import { runRowReporter } from './rowReporter';
+import { runReport } from './helpers/runReport';
 
 /**
  * Streams every diagnostic as one JSON object per line (NDJSON), so this process
@@ -9,6 +9,6 @@ export const ndjsonReporter = (
   options: { verbose: boolean; allTypeErrors: boolean },
   ...inputPaths: string[]
 ): void =>
-  runRowReporter(options, inputPaths, {
+  runReport(options, inputPaths, {
     onRow: row => console.log(JSON.stringify(row)),
   });

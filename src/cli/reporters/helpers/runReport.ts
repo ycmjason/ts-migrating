@@ -1,9 +1,9 @@
 import path from 'node:path';
 import process from 'node:process';
 import ts from 'typescript/lib/tsserverlibrary';
-import { getTsMigratingReportForFile } from '../../api/getTsMigratingReportForFile';
-import type { DiagnosticOrigin, TsMigratingReportEntry } from '../../api/mod';
-import { getPluginEnabledTSFilePaths } from '../ops/getPluginEnabledTSFilePaths';
+import { getTsMigratingReportForFile } from '../../../api/getTsMigratingReportForFile';
+import type { DiagnosticOrigin, TsMigratingReportEntry } from '../../../api/mod';
+import { getPluginEnabledTSFilePaths } from '../../ops/getPluginEnabledTSFilePaths';
 
 /** 1-based line/column, mirroring `tsc`/editor gutters (not LSP's 0-based). */
 type Position = { line: number; column: number };
@@ -54,15 +54,15 @@ const toReportRow = (
 };
 
 /**
- * Shared engine for the row-based (json / ndjson) reporters: discover files,
- * turn every diagnostic into a {@link ReportRow} and hand it to `onRow`, then
- * run `onDone`. A reporter decides only *how* a row is written.
+ * Shared engine behind the `json` and `ndjson` reporters: discover files, turn
+ * every diagnostic into a {@link ReportRow} and hand it to `onRow`, then run
+ * `onDone`. A reporter decides only *how* a row is written.
  *
  * We set `process.exitCode` and let the process exit naturally rather than
  * calling `process.exit()`, so Node flushes stdout in full (no truncation) — the
  * project service holds no watchers, so nothing keeps the event loop alive.
  */
-export const runRowReporter = (
+export const runReport = (
   { verbose, allTypeErrors }: { verbose: boolean; allTypeErrors: boolean },
   inputPaths: string[],
   {

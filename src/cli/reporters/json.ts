@@ -1,4 +1,4 @@
-import { type ReportRow, runRowReporter } from './rowReporter';
+import { type ReportRow, runReport } from './helpers/runReport';
 
 /**
  * Buffers every diagnostic into a single JSON array. Convenient for `jq '.'` and
@@ -10,7 +10,7 @@ export const jsonReporter = (
   ...inputPaths: string[]
 ): void => {
   const rows: ReportRow[] = [];
-  runRowReporter(options, inputPaths, {
+  runReport(options, inputPaths, {
     onRow: row => {
       rows.push(row);
     },
