@@ -3,9 +3,11 @@ import { expandTSFilePaths } from '../expandTSFilePaths';
 
 export const getPluginEnabledTSFilePaths = (
   inputPaths: string[],
-  { verbose }: { verbose: boolean },
+  // `log` lets the JSON reporter divert progress chatter to stderr so stdout
+  // stays a clean JSON document. Defaults to stdout for the human reporters.
+  { verbose, log = console.log }: { verbose: boolean; log?: (...args: unknown[]) => void },
 ): string[] => {
-  console.log('🔎  Looking for ts-migrating enabled TypeScript files...');
+  log('🔎  Looking for ts-migrating enabled TypeScript files...');
   const pluginEnabledFiles = expandTSFilePaths(inputPaths.length <= 0 ? ['.'] : inputPaths)
     .flatMap(path => {
       const { pluginEnabled, tsconfigPath } = getTSInfoForFile(path);
@@ -28,17 +30,17 @@ export const getPluginEnabledTSFilePaths = (
     .map(({ path }) => path);
 
   const fileCount = pluginEnabledFiles.length;
-  console.log(
+  log(
     `👀 ${fileCount} file${fileCount === 1 ? '' : 's'} found${!verbose ? ' (use -v or --verbose to list files)' : ':'}`,
   );
 
   if (verbose && fileCount > 0) {
     for (const file of pluginEnabledFiles) {
-      console.log(`  • ${file}`);
+      log(`  • ${file}`);
     }
   }
 
-  console.log();
+  log();
 
   return pluginEnabledFiles;
 };

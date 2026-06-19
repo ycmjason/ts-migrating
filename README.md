@@ -54,6 +54,7 @@ The philosophy behind the plugin follows three simple steps:
    * `ts-migrating check`
 
      * Run `@ts-migrating`-aware type checking using your new `tsconfig`.
+     * Pass `--reporter json` (or `ndjson`) to emit a machine-readable report for CI gates and dashboards (see [📊 JSON reporting](#-json-reporting)).
    * `ts-migrating annotate`
 
      * Automatically mark all errors caused by your new `tsconfig` with `@ts-migrating`.
@@ -140,18 +141,83 @@ In your existing `tsconfig.json`, add the plugin:
 * Run `npx ts-migrating annotate` to automatically annotate newly introduced errors with `// @ts-migrating`.
 * Replace your CI type-check step with `npx ts-migrating check` to prevent unreviewed errors from slipping through.
 
+## 📊 JSON reporting
+
+For CI gates and dashboards, `check` can emit a machine-readable report instead of the human-readable output:
+
+```bash
+npx ts-migrating check --reporter json    # one JSON array
+npx ts-migrating check --reporter ndjson  # one JSON object per line (streamable)
+```
+
+`stdout` carries **one entry per diagnostic** (progress logs go to `stderr`, so `stdout` stays pure). The flat shape is easy to `jq`/group/count or convert to CSV. With `json` you get a single array:
+
+```jsonc
+[
+  {
+    "file": "src/one.ts",                    // relative to the current working directory
+    "position": {                            // 1-based line/column; null for file-level diagnostics
+      "start": { "line": 32, "column": 10 },
+      "end": { "line": 32, "column": 18 }
+    },
+    "code": 7006,                            // the TypeScript error code
+    "message": "Parameter 'x' implicitly has an 'any' type.",
+    "origin": "ts-migrating",                // "ts-migrating" = introduced by your target tsconfig; "baseline" = already present (current tsconfig + other plugins)
+    "markedWithTsMigratingDirective": false  // true = suppressed by a @ts-migrating directive (i.e. migration debt)
+  }
+]
+```
+
+`--reporter ndjson` emits the exact same records, but one JSON object per line ([NDJSON](https://github.com/ndjson/ndjson-spec)) instead of an array. Prefer it on large repos: it streams (neither `ts-migrating` nor your consumer has to hold the whole report in memory) and pipes line-by-line into `jq -c`, `grep`, or `wc -l`.
+
+This gives you everything to build your own metrics, for example:
+
+* **Track remaining migration debt** — count entries where `markedWithTsMigratingDirective` is `true`. This is the number that trends down to zero as you migrate (the unmarked ones are kept at `0` by your CI gate).
+* **Fail CI on regressions** — compare the debt count against the base branch and fail if it goes up.
+* **Break down by error code** — group `origin: "ts-migrating"` entries by `code` to see what to tackle first.
+
+```bash
+# remaining migration debt
+npx ts-migrating check --reporter json | jq '[.[] | select(.markedWithTsMigratingDirective)] | length'
+
+# unmarked ts-migrating errors grouped by error code
+# (filter *before* grouping so marked debt and baseline errors don't leak in)
+npx ts-migrating check --reporter json \
+  | jq 'map(select(.origin == "ts-migrating" and (.markedWithTsMigratingDirective | not)))
+        | group_by(.code)[] | { code: .[0].code, count: length }'
+
+# streaming: count remaining debt line-by-line, nothing held in memory
+npx ts-migrating check --reporter ndjson \
+  | jq -c 'select(.markedWithTsMigratingDirective)' | wc -l
+```
+
+> ℹ️ The command still exits non-zero when there are *unmarked* `ts-migrating` errors (and, with `--all-type-errors`, when there are pre-existing `baseline` errors), so it can both gate CI and produce the report. The JSON is printed regardless of the exit code.
+
+> ℹ️ Stale (unused) `@ts-migrating` directives are reported too — as unmarked `ts-migrating` entries with code `555` — so the JSON gate fails on them exactly like the default `check`. Filter them out with `select(.code != 555)` if you only want real type errors.
+
 ## API
 
 You can use this project programmatically. This can be useful if you would like to have custom integrations, for example: reporting error counts to dashboard etc.
 
-Currently there are only 2 functions exposed, [`getSemanticDiagnosticsForFile`](./src/api/getSemanticDiagnostics.ts) and [`isPluginDiagnostic`](./src/api/isPluginDiagnostic.ts). You can import them via `ts-migrating/api`, e.g.
+The functions are exposed via `ts-migrating/api`:
 
-```ts
-import { getSemanticDiagnosticsForFile, isPluginDiagnostic } from 'ts-migrating/api';
+* [`getTsMigratingReportForFile`](./src/api/getTsMigratingReportForFile.ts) — returns one entry per diagnostic for a file, each tagged with its `origin` (`ts-migrating` vs `baseline`) and whether it is `markedWithTsMigratingDirective`. This powers the [JSON reporter](#-json-reporting) and, unlike `getSemanticDiagnosticsForFile`, **also surfaces the marked errors** (your migration debt), which the language service otherwise hides.
 
-getSemanticDiagnosticsForFile('path/to/file.ts') // returns all diagnostics using your new tsconfig, including non-plugin ones
-  .filter(isPluginDiagnostic) // removes all non-plugin diagnostics
-```
+  ```ts
+  import { getTsMigratingReportForFile } from 'ts-migrating/api';
+
+  const report = getTsMigratingReportForFile('path/to/file.ts');
+  const debt = report.filter(e => e.markedWithTsMigratingDirective).length;
+  ```
+
+* [`getSemanticDiagnosticsForFile`](./src/api/getSemanticDiagnostics.ts) and [`isPluginDiagnostic`](./src/api/isPluginDiagnostic.ts) — the raw diagnostics for a file (excluding marked lines):
+
+  ```ts
+  import { getSemanticDiagnosticsForFile, isPluginDiagnostic } from 'ts-migrating/api';
+
+  getSemanticDiagnosticsForFile('path/to/file.ts') // returns all diagnostics using your new tsconfig, including non-plugin ones
+    .filter(isPluginDiagnostic) // removes all non-plugin diagnostics
+  ```
 
 You could technically also import from `ts-migrating/cli` and `ts-migrating` (the ts plugin itself) too.
 
