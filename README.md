@@ -1,3 +1,5 @@
+
+
 # `@ts-migrating` — Progressively Upgrade `tsconfig.json`
 
 🚀 **TypeScript keeps evolving — and your `tsconfig` should too.**
@@ -58,7 +60,7 @@ The philosophy behind the plugin follows three simple steps:
    * `ts-migrating annotate`
 
      * Automatically mark all errors caused by your new `tsconfig` with `@ts-migrating`.
-     * ⚠️ Run this with a clean git state!!! This script will automatically add the `@ts-migrating` directive above every line with TypeScript error introduced by your new `tsconfig`. Please review the changes carefully. It is recommended to run your formatter and linter afterwards. You may need to run this command again after formatter / linter.️
+     * ⚠️ Run this with a clean git state!!! This script will automatically add the `@ts-migrating` directive above every line with TypeScript error introduced by your new `tsconfig`. Please review the changes carefully. It is recommended to run your formatter and linter afterwards. You may need to run this command again after formatter / linter.
 
 ## 🎪 Examples
 
