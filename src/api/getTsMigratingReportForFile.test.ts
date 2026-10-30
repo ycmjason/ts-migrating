@@ -331,7 +331,19 @@ export const c = greet(undefined);
     ]);
   });
   // TypeScript 7.1.0-beta's native process crashes when such a file is opened,
-  // see ../engine/isOutsideReferencedProjects.ts
+  // see ../engine/getNearestTsconfigMembership.ts
+  it.each([
+    ['an empty `files`', { files: [] }],
+    ['an `include` that matches nothing', { include: ['empty'] }],
+  ])('skips a file next to a tsconfig with %s', (_, tsconfig) => {
+    const dir = setupTmpDir({
+      './tsconfig.json': JSON.stringify(tsconfig),
+      './x.ts': 'export const f = (x) => x;\n',
+    });
+
+    expect([...getTsMigratingReportForFiles([join(dir, 'x.ts')])]).toEqual([]);
+  });
+
   it('skips files outside every project of a solution-style tsconfig', () => {
     const dir = setupTmpDir({
       './tsconfig.json': JSON.stringify({

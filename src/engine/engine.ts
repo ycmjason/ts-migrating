@@ -44,7 +44,7 @@ export const getFileProjectInfos = (api: API, fileNames: readonly string[]): Fil
       // JS files are only worth opening when a tsconfig includes them; this
       // keeps build output (e.g. `dist/**/*.js`) out of inferred projects.
       if (/\.[cm]?jsx?$/i.test(fileName)) return membership === 'included';
-      return membership !== 'outside-referenced-projects';
+      return membership !== 'unopenable';
     }),
   );
   if (openableFileNames.size <= 0) {
