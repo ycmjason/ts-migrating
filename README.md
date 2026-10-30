@@ -209,7 +209,7 @@ You can use this project programmatically, for custom integrations such as repor
 
 ## 🚚 Migrating from 1.x
 
-1.x stays available for TypeScript 5–6 and editor support: it lives on the [`v1` branch](https://github.com/ycmjason/ts-migrating/tree/v1) and is published under the `latest-1` dist-tag (`npm install -D ts-migrating@latest-1`).
+1.x stays available for TypeScript 5–6 and editor support: it lives on the [`v1` branch](https://github.com/ycmjason/ts-migrating/tree/v1) (`npm install -D ts-migrating@1`).
 
 To move to 2.x:
 
