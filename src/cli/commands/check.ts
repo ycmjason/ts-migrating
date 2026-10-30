@@ -1,5 +1,5 @@
 import process from 'node:process';
-import { type ReporterName, reporters } from '../reporters/mod';
+import { type ReporterName, reporters } from '../reporters/mod.ts';
 
 export const check = (
   {

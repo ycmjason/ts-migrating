@@ -1,7 +1,6 @@
 import * as recast from 'recast';
-import * as babelTsParser from 'recast/parsers/babel-ts';
-import { expect } from 'vitest';
-import { maxBy } from './utils/maxBy';
+import { babelTsParser } from './babelTsParser.ts';
+import { maxBy } from './maxBy.ts';
 
 const b = recast.types.builders;
 
@@ -44,24 +43,19 @@ const getLineColumnPosition = (
 };
 
 if (import.meta.vitest) {
-  const { it, describe } = import.meta.vitest;
+  const { it, describe, expect } = import.meta.vitest;
 
   describe('getAbsolutePosition / getLineColumnPosition', async () => {
-    const ts = await import('typescript/lib/tsserverlibrary');
+    const { computeLineStarts } = await import('typescript/ast/scanner');
 
     it('should return the absolute position and back', () => {
       const code = `const a = 'hi'
 const b = 'bye'
 hello()`;
-      const sourcefile = ts.createSourceFile(
-        'tmp.ts',
-        code,
-        ts.ScriptTarget.Latest,
-        true,
-        ts.ScriptKind.TSX,
-      );
+      const lineStarts = computeLineStarts(code);
       const checkForIndex = (index: number) => {
-        const { line, character } = ts.getLineAndCharacterOfPosition(sourcefile, index);
+        const line = lineStarts.findLastIndex(lineStart => lineStart <= index);
+        const character = index - (lineStarts[line] ?? 0);
         expect(getAbsolutePosition(code, { line: line + 1, column: character })).toBe(index);
         expect(getLineColumnPosition(code, index)).toEqual({ line: line + 1, column: character });
       };
@@ -219,7 +213,7 @@ export const insertSingleLineCommentAtPositions = (
 };
 
 if (import.meta.vitest) {
-  const { it, describe } = import.meta.vitest;
+  const { it, describe, expect } = import.meta.vitest;
 
   describe('insertSingleLineCommentsAtPositions', () => {
     it('should insert comment at given position', () => {

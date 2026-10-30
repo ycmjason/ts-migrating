@@ -1,12 +1,12 @@
 #!/usr/bin/env node
 import process from 'node:process';
 import { buildApplication, buildCommand, buildRouteMap, run } from '@stricli/core';
-import packageJSON from '../../package.json' with { type: 'json' };
-import { ANNOTATE_WARNING } from './constants/annotate-warning';
-import { applyMaxOldSpaceSize } from './maxOldSpaceSize';
+import { packageJson as packageJSON } from '../packageJson.ts';
+import { ANNOTATE_WARNING } from './constants/annotate-warning.ts';
+import { applyMaxOldSpaceSize } from './maxOldSpaceSize.ts';
 
-// Honour a `--max-old-space-size` flag by re-exec'ing node with it before any
-// heavy work; returns the remaining args (with the flag removed) to parse.
+// Strip (and warn about) the no-op `--max-old-space-size` flag; returns the
+// remaining args to parse.
 const args = applyMaxOldSpaceSize();
 
 (async () => {
@@ -15,7 +15,7 @@ const args = applyMaxOldSpaceSize();
       buildRouteMap({
         routes: {
           check: buildCommand({
-            loader: async () => (await import('./commands/check')).check,
+            loader: async () => (await import('./commands/check.ts')).check,
             parameters: {
               flags: {
                 verbose: {
@@ -57,7 +57,7 @@ const args = applyMaxOldSpaceSize();
             },
           }),
           annotate: buildCommand({
-            loader: async () => (await import('./commands/annotate')).annotate,
+            loader: async () => (await import('./commands/annotate.ts')).annotate,
             parameters: {
               flags: {
                 verbose: {
@@ -86,7 +86,7 @@ ${ANNOTATE_WARNING}`,
             },
           }),
           info: buildCommand({
-            func: (await import('./commands/info')).info,
+            func: (await import('./commands/info.ts')).info,
             parameters: {
               positional: {
                 kind: 'array',

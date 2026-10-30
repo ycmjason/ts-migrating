@@ -1,7 +1,7 @@
-import type { ReportTally } from './helpers/runReport';
-import { jsonReporter } from './json';
-import { ndjsonReporter } from './ndjson';
-import { prettyReporter } from './pretty';
+import type { ReportTally } from './helpers/runReport.ts';
+import { jsonReporter } from './json.ts';
+import { ndjsonReporter } from './ndjson.ts';
+import { prettyReporter } from './pretty.ts';
 
 type ReporterFn = (
   options: { verbose: boolean; allTypeErrors: boolean },
