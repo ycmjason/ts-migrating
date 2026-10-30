@@ -1,3 +1,2 @@
 allowBuilds:
-  '@biomejs/biome': true
-  esbuild: true
+  "@biomejs/biome": true

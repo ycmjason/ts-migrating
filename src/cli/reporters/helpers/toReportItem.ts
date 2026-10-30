@@ -1,6 +1,7 @@
 import path from 'node:path';
-import ts from 'typescript/lib/tsserverlibrary';
-import type { DiagnosticOrigin, TsMigratingReportEntry } from '../../../api/mod';
+import type { Diagnostic } from 'typescript/sync';
+import { flattenDiagnosticMessage } from '../../../engine/diagnostics.ts';
+import type { DiagnosticOrigin, TsMigratingReportEntry } from '../../../engine/types.ts';
 
 /** 1-based line/column, mirroring `tsc`/editor gutters (not LSP's 0-based). */
 type Position = { line: number; column: number };
@@ -27,27 +28,23 @@ export const toReportItem = (
   { diagnostic, origin, markedWithTsMigratingDirective }: TsMigratingReportEntry,
   { cwd }: { cwd: string },
 ): ReportItem => {
-  const sourceFile = diagnostic.file;
+  const { fileName, startPosition, endPosition } = diagnostic;
 
-  const position = (() => {
-    if (!sourceFile || diagnostic.start === undefined) return null;
-    const toPosition = (offset: number): Position => {
-      const { line, character } = sourceFile.getLineAndCharacterOfPosition(offset);
-      return { line: line + 1, column: character + 1 };
-    };
-    return {
-      start: toPosition(diagnostic.start),
-      end: toPosition(diagnostic.start + (diagnostic.length ?? 0)),
-    };
-  })();
+  const toPosition = ({ line, character }: { line: number; character: number }): Position => ({
+    line: line + 1,
+    column: character + 1,
+  });
 
   return {
     // Normalise to forward slashes so rows line up across OSes (Windows
     // `path.relative` would otherwise emit `src\one.ts`).
-    file: sourceFile ? path.relative(cwd, sourceFile.fileName).replaceAll(path.sep, '/') : '',
-    position,
+    file: fileName ? path.relative(cwd, fileName).replaceAll(path.sep, '/') : '',
+    position:
+      fileName && startPosition && endPosition
+        ? { start: toPosition(startPosition), end: toPosition(endPosition) }
+        : null,
     code: diagnostic.code,
-    message: ts.flattenDiagnosticMessageText(diagnostic.messageText, '\n'),
+    message: flattenDiagnosticMessage(diagnostic),
     origin,
     markedWithTsMigratingDirective,
   };
@@ -55,28 +52,31 @@ export const toReportItem = (
 
 if (import.meta.vitest) {
   const { describe, it, expect } = import.meta.vitest;
-
-  const sourceFileOf = (fileName: string, content: string): ts.SourceFile =>
-    ts.createSourceFile(fileName, content, ts.ScriptTarget.ESNext, true);
+  const { DiagnosticCategory } = await import('typescript/sync');
+  // `fileName` is a branded path type; plain strings are fine for these fixtures.
+  const fileNameOf = (fileName: string) => fileName as Diagnostic['fileName'];
 
   describe('toReportItem', () => {
     const cwd = '/repo';
 
     it('maps a ts-migrating error to a flat item with a 1-based range', () => {
-      const file = sourceFileOf('/repo/src/one.ts', 'const a = 1;\nconst b = obj[i];\n');
       const start = 'const a = 1;\nconst b = '.length;
-      const diagnostic: ts.Diagnostic = {
-        category: ts.DiagnosticCategory.Error,
-        code: 18048,
-        file,
-        start,
-        length: 'obj[i]'.length,
-        messageText: "'obj[i]' is possibly 'undefined'.",
-      };
-
       expect(
         toReportItem(
-          { diagnostic, origin: 'ts-migrating', markedWithTsMigratingDirective: false },
+          {
+            diagnostic: {
+              fileName: fileNameOf('/repo/src/one.ts'),
+              pos: start,
+              end: start + 'obj[i]'.length,
+              startPosition: { line: 1, character: 10 },
+              endPosition: { line: 1, character: 16 },
+              category: DiagnosticCategory.Error,
+              code: 18048,
+              text: "'obj[i]' is possibly 'undefined'.",
+            },
+            origin: 'ts-migrating',
+            markedWithTsMigratingDirective: false,
+          },
           { cwd },
         ),
       ).toEqual({
@@ -93,23 +93,24 @@ if (import.meta.vitest) {
     });
 
     it('flattens message chains and preserves origin/marked', () => {
-      const file = sourceFileOf('/repo/src/two.ts', 'x;\n');
-      const diagnostic: ts.Diagnostic = {
-        category: ts.DiagnosticCategory.Error,
-        code: 2304,
-        file,
-        start: 0,
-        length: 1,
-        messageText: {
-          category: ts.DiagnosticCategory.Error,
-          code: 2304,
-          messageText: 'Outer.',
-          next: [{ category: ts.DiagnosticCategory.Error, code: 0, messageText: 'Inner.' }],
-        },
-      };
-
       const item = toReportItem(
-        { diagnostic, origin: 'baseline', markedWithTsMigratingDirective: false },
+        {
+          diagnostic: {
+            fileName: fileNameOf('/repo/src/two.ts'),
+            pos: 0,
+            end: 1,
+            startPosition: { line: 0, character: 0 },
+            endPosition: { line: 0, character: 1 },
+            category: DiagnosticCategory.Error,
+            code: 2304,
+            text: 'Outer.',
+            messageChain: [
+              { pos: 0, end: 0, category: DiagnosticCategory.Error, code: 0, text: 'Inner.' },
+            ],
+          },
+          origin: 'baseline',
+          markedWithTsMigratingDirective: false,
+        },
         { cwd },
       );
 
@@ -118,18 +119,19 @@ if (import.meta.vitest) {
     });
 
     it('returns null position for diagnostics without a source position', () => {
-      const diagnostic: ts.Diagnostic = {
-        category: ts.DiagnosticCategory.Error,
-        code: 1,
-        file: undefined,
-        start: undefined,
-        length: undefined,
-        messageText: 'whole-program error',
-      };
-
       expect(
         toReportItem(
-          { diagnostic, origin: 'baseline', markedWithTsMigratingDirective: false },
+          {
+            diagnostic: {
+              pos: 0,
+              end: 0,
+              category: DiagnosticCategory.Error,
+              code: 1,
+              text: 'whole-program error',
+            },
+            origin: 'baseline',
+            markedWithTsMigratingDirective: false,
+          },
           { cwd },
         ).position,
       ).toBeNull();
