@@ -36,8 +36,15 @@ jobs:
       - name: Extract version info
         id: version
         run: |
+          NAME=$(node -p "require('./package.json').name")
           VERSION=$(node -p "require('./package.json').version")
           echo "version=$VERSION" >> $GITHUB_OUTPUT
+          # Pushes without a version bump (and creating `v1`) have nothing to publish.
+          if [ -n "$(npm view "$NAME@$VERSION" version 2>/dev/null)" ]; then
+            echo "already_published=true" >> $GITHUB_OUTPUT
+          else
+            echo "already_published=false" >> $GITHUB_OUTPUT
+          fi
           if echo "$VERSION" | grep -qE '(alpha|beta|rc)'; then
             PRERELEASE_TAG=$(echo "$VERSION" | grep -oE '(alpha|beta|rc)')
             echo "prerelease_tag=$PRERELEASE_TAG" >> $GITHUB_OUTPUT
@@ -48,10 +55,11 @@ jobs:
 
       # Releases from `v1` get a `-1` suffixed dist-tag (`latest-1`, `beta-1`, ...)
       # so a 1.x patch never takes over `latest` or `beta` from 2.x.
+      # `--publish-branch`: pnpm only publishes from `main`/`master` by default.
       - name: Publish stable release to npm
-        if: steps.version.outputs.is_prerelease == 'false'
-        run: pnpm -r publish --tag ${{ github.ref_name == 'v1' && 'latest-1' || 'latest' }}
+        if: steps.version.outputs.already_published == 'false' && steps.version.outputs.is_prerelease == 'false'
+        run: pnpm -r publish --publish-branch ${{ github.ref_name }} --tag ${{ github.ref_name == 'v1' && 'latest-1' || 'latest' }}
 
       - name: Publish pre-release to npm
-        if: steps.version.outputs.is_prerelease == 'true'
-        run: pnpm -r publish --tag ${{ steps.version.outputs.prerelease_tag }}${{ github.ref_name == 'v1' && '-1' || '' }}
+        if: steps.version.outputs.already_published == 'false' && steps.version.outputs.is_prerelease == 'true'
+        run: pnpm -r publish --publish-branch ${{ github.ref_name }} --tag ${{ steps.version.outputs.prerelease_tag }}${{ github.ref_name == 'v1' && '-1' || '' }}
