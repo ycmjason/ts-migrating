@@ -40,11 +40,12 @@ export const getFileProjectInfos = (api: API, fileNames: readonly string[]): Fil
     absoluteFileNames.filter(fileName => {
       // TypeScript has no project for anything else (e.g. `.html`, issue #14).
       if (!isCheckableSourceFile(fileName)) return false;
-      const membership = getNearestTsconfigMembership(fileName);
       // JS files are only worth opening when a tsconfig includes them; this
       // keeps build output (e.g. `dist/**/*.js`) out of inferred projects.
-      if (/\.[cm]?jsx?$/i.test(fileName)) return membership === 'included';
-      return membership !== 'unopenable';
+      if (/\.[cm]?jsx?$/i.test(fileName)) {
+        return getNearestTsconfigMembership(fileName) === 'included';
+      }
+      return true;
     }),
   );
   if (openableFileNames.size <= 0) {

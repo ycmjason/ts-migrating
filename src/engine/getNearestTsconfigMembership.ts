@@ -5,12 +5,6 @@ import type { API } from 'typescript/sync';
 export type NearestTsconfigMembership =
   /** The nearest tsconfig, or a project it references, includes the file. */
   | 'included'
-  /**
-   * The nearest tsconfig matches no files of its own (e.g. a solution-style
-   * `"files": []` with `references`, or an `include` that matches nothing) and
-   * neither it nor a project it references includes the file.
-   */
-  | 'unopenable'
   /** The nearest tsconfig doesn't include the file. */
   | 'excluded'
   /** No tsconfig.json in any ancestor directory. */
@@ -20,11 +14,6 @@ export type NearestTsconfigMembership =
  * How a file relates to its nearest `tsconfig.json`, decided by parsing
  * tsconfigs only (no program is built), so we can avoid opening files that
  * can't be in a ts-migrating project.
- *
- * `'unopenable'` files must never be opened: TypeScript 7.1.0-beta's native
- * process panics on them (e.g. a stray root `vitest.config.ts` next to a
- * solution-style tsconfig), which kills the whole API session.
- * TODO: revisit once https://github.com/microsoft/TypeScript/issues/65054 is fixed.
  */
 export const createGetNearestTsconfigMembership = (api: API) => {
   const nearestTsconfigByDir = new Map<string, string | undefined>();
@@ -80,7 +69,6 @@ export const createGetNearestTsconfigMembership = (api: API) => {
   return (fileName: string): NearestTsconfigMembership => {
     const configPath = findNearestTsconfig(path.dirname(fileName));
     if (configPath === undefined) return 'no-tsconfig';
-    if (isIncluded(configPath, fileName, new Set())) return 'included';
-    return parse(configPath)?.fileNames.size === 0 ? 'unopenable' : 'excluded';
+    return isIncluded(configPath, fileName, new Set()) ? 'included' : 'excluded';
   };
 };
