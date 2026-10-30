@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - main
+      # Maintenance line for ts-migrating 1.x (TypeScript 5–6).
+      - v1
 
 jobs:
   publish:
@@ -44,10 +46,12 @@ jobs:
             echo "is_prerelease=false" >> $GITHUB_OUTPUT
           fi
 
+      # Releases from `v1` get a `-1` suffixed dist-tag (`latest-1`, `beta-1`, ...)
+      # so a 1.x patch never takes over `latest` or `beta` from 2.x.
       - name: Publish stable release to npm
         if: steps.version.outputs.is_prerelease == 'false'
-        run: pnpm -r publish
+        run: pnpm -r publish --tag ${{ github.ref_name == 'v1' && 'latest-1' || 'latest' }}
 
       - name: Publish pre-release to npm
         if: steps.version.outputs.is_prerelease == 'true'
-        run: pnpm -r publish --tag ${{ steps.version.outputs.prerelease_tag }}
+        run: pnpm -r publish --tag ${{ steps.version.outputs.prerelease_tag }}${{ github.ref_name == 'v1' && '-1' || '' }}

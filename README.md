@@ -8,6 +8,9 @@ Upgrading `tsconfig` often breaks existing code, and fixing all errors at once i
 
 **`@ts-migrating`** helps your team migrate to a desired `tsconfig` gradually and safely.
 
+> [!IMPORTANT]
+> **ts-migrating 1.x supports TypeScript 5 and 6 only.** TypeScript 7 can't load editor (language service) plugins, so the 1.x editor integration can't work there. On TypeScript 7.1+, use ts-migrating 2.x, which keeps the `check` and `annotate` commands for CI but has no editor plugin. 1.x is maintained on the [`v1`](https://github.com/ycmjason/ts-migrating/tree/v1) branch for critical fixes only.
+
 > I chose `@ts-migrating` (rather than `@ts-migration`) to better reflect the plugin’s progressive and incremental philosophy.
 
 ## 🙋‍♀️ Why not `@ts-expect-error` / `@ts-ignore`?
