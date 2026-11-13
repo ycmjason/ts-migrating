@@ -1,6 +1,6 @@
 import process from 'node:process';
-import { type ReportTally, runReport } from './helpers/runReport';
-import { type ReportItem, toReportItem } from './helpers/toReportItem';
+import { type ReportTally, runReport } from './helpers/runReport.ts';
+import { type ReportItem, toReportItem } from './helpers/toReportItem.ts';
 
 /**
  * Buffers every diagnostic into a single JSON array. Convenient for `jq '.'` and

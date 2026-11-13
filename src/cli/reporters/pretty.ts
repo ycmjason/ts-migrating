@@ -1,13 +1,33 @@
 import process from 'node:process';
-import ts from 'typescript/lib/tsserverlibrary';
-import { brandifyDiagnostic } from '../../plugin/utils/diagnostics';
-import { type ReportTally, runReport } from './helpers/runReport';
+import {
+  type Diagnostic,
+  type FormatDiagnosticsHost,
+  formatDiagnosticsWithColorAndContext,
+} from 'typescript/sync';
+import { PLUGIN_DIAGNOSTIC_TAG } from '../../constants.ts';
+import { type ReportTally, runReport } from './helpers/runReport.ts';
 
-const FORMAT_HOST: ts.FormatDiagnosticsHost = {
+const FORMAT_HOST: FormatDiagnosticsHost = {
   getCanonicalFileName: fileName => fileName,
   getCurrentDirectory: () => process.cwd(),
-  getNewLine: () => ts.sys.newLine,
+  getNewLine: () => '\n',
 };
+
+/** Prefix the message with `[ts-migrating]`, nesting the original message under it. */
+const brandifyDiagnostic = (diagnostic: Diagnostic): Diagnostic => ({
+  ...diagnostic,
+  text: PLUGIN_DIAGNOSTIC_TAG,
+  messageChain: [
+    {
+      pos: diagnostic.pos,
+      end: diagnostic.end,
+      code: diagnostic.code,
+      category: diagnostic.category,
+      text: diagnostic.text,
+      messageChain: diagnostic.messageChain,
+    },
+  ],
+});
 
 /**
  * Human-readable reporter: prints diagnostics with colour and source context
@@ -15,7 +35,7 @@ const FORMAT_HOST: ts.FormatDiagnosticsHost = {
  * output.
  *
  * Skips marked debt, shows only `ts-migrating` errors by default
- * (`--all-type-errors` adds baseline ones), and re-brands `ts-migrating`
+ * (`--all-type-errors` adds baseline ones), and prefixes `ts-migrating`
  * diagnostics so they read as `[ts-migrating]`.
  */
 export const prettyReporter = (
@@ -23,7 +43,7 @@ export const prettyReporter = (
   ...inputPaths: string[]
 ): ReportTally => {
   console.log(
-    `⏳ Checking for ${allTypeErrors ? 'all TypeScript errors' : '[ts-migrating] plugin errors only'}...`,
+    `⏳ Checking for ${allTypeErrors ? 'all TypeScript errors' : '[ts-migrating] errors only'}...`,
   );
   console.log();
 
@@ -38,7 +58,7 @@ export const prettyReporter = (
     // errors are real `tsc` errors and stay as-is.
     const diagnostic =
       entry.origin === 'ts-migrating' ? brandifyDiagnostic(entry.diagnostic) : entry.diagnostic;
-    console.log(ts.formatDiagnosticsWithColorAndContext([diagnostic], FORMAT_HOST));
+    console.log(formatDiagnosticsWithColorAndContext([diagnostic], FORMAT_HOST));
   }
   console.timeEnd('Type checking duration');
 
@@ -55,10 +75,10 @@ export const prettyReporter = (
 
   if (unmarkedTsMigratingErrorCount > 0) {
     console.error(
-      `❌ ${unmarkedTsMigratingErrorCount} unmarked plugin error${unmarkedTsMigratingErrorCount === 1 ? '' : 's'} found. Run \`npx ts-migrating annotate\` to automatically mark them!`,
+      `❌ ${unmarkedTsMigratingErrorCount} unmarked [ts-migrating] error${unmarkedTsMigratingErrorCount === 1 ? '' : 's'} found. Run \`npx ts-migrating annotate\` to automatically mark them!`,
     );
   } else {
-    console.log('✅ No unmarked plugin errors found.');
+    console.log('✅ No unmarked [ts-migrating] errors found.');
   }
 
   return tally;

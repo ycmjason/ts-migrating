@@ -33,13 +33,16 @@ jobs:
       - name: Type check
         run: pnpm check:type
 
-  test-typescript-matrix:
-    name: Test (TypeScript ${{ matrix.typescript }})
+  test:
+    name: Test (TypeScript ${{ matrix.typescript }}, Node.js ${{ matrix.node }})
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        typescript: ["5.0", "5.4", "5.8", "6.0"]
+        # TODO: switch to "~7.1" once TypeScript 7.1 is released.
+        typescript: ["7.1.0-beta"]
+        # the lowest supported Node.js (engines.node) and the development one (devEngines)
+        node: ["22.18.0", "24"]
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
@@ -48,7 +51,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v6
         with:
-          node-version-file: "package.json"
+          node-version: ${{ matrix.node }}
           cache: "pnpm"
           registry-url: "https://registry.npmjs.org"
 
@@ -56,7 +59,7 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Override TypeScript version
-        run: pnpm add -D typescript@~${{ matrix.typescript }}
+        run: pnpm add -D typescript@${{ matrix.typescript }}
 
       - name: Test
         run: pnpm test

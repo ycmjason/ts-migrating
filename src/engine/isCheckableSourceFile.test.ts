@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isCheckableSourceFile } from './isCheckableSourceFile';
+import { isCheckableSourceFile } from './isCheckableSourceFile.ts';
 
 describe('isCheckableSourceFile', () => {
   it.each([

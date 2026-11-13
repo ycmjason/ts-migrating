@@ -1,6 +1,6 @@
 import process from 'node:process';
-import { type ReportTally, runReport } from './helpers/runReport';
-import { toReportItem } from './helpers/toReportItem';
+import { type ReportTally, runReport } from './helpers/runReport.ts';
+import { toReportItem } from './helpers/toReportItem.ts';
 
 /**
  * Streams every diagnostic as one JSON object per line (NDJSON), so this process

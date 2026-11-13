@@ -1,17 +1,17 @@
 {
   "compilerOptions": {
-    "target": "ESNext",
-    "module": "ESNext",
-    "moduleResolution": "bundler",
-    "esModuleInterop": true,
+    "target": "ES2023",
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "rewriteRelativeImportExtensions": true,
     "forceConsistentCasingInFileNames": true,
     "strict": true,
     "erasableSyntaxOnly": true,
+    "verbatimModuleSyntax": true,
     "noUncheckedIndexedAccess": true,
     "skipLibCheck": true,
-    "resolveJsonModule": true,
     "noEmit": true,
-    "types": ["vitest/importMeta"]
+    "types": ["node", "vitest/importMeta"]
   },
-  "include": ["./src", "./vitest.config.ts", "./tsup.config.ts"]
+  "include": ["./src", "./vitest.config.ts"]
 }

@@ -4,6 +4,5 @@ export default defineConfig({
   test: {
     root: 'src',
     includeSource: ['**/*.{js,ts,tsx,jsx}'],
-    globalSetup: ['../vitest.globalSetup.ts'],
   },
 });

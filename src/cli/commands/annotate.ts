@@ -1,22 +1,17 @@
 /** biome-ignore-all lint/suspicious/noTemplateCurlyInString: need to store template curly */
 import fs from 'node:fs/promises';
-import type ts from 'typescript/lib/tsserverlibrary';
-import { getSemanticDiagnosticsForFile } from '../../api/getSemanticDiagnostics';
-import { insertSingleLineCommentAtPositions } from '../../api/insertSingleLineCommentsAtPositions';
-import { isPluginDiagnostic } from '../../api/isPluginDiagnostic';
-import { DIRECTIVE } from '../../plugin/constants/DIRECTIVE';
-import { UNUSED_DIRECTIVE_DIAGNOSTIC_CODE } from '../../plugin/constants/UNUSED_DIRECTIVE_DIAGNOSTIC_CODE';
-import { ANNOTATE_WARNING } from '../constants/annotate-warning';
-import { getPluginEnabledTSFilePaths } from '../ops/getPluginEnabledTSFilePaths';
+import { API } from 'typescript/sync';
+import { DIRECTIVE, UNUSED_DIRECTIVE_DIAGNOSTIC_CODE } from '../../constants.ts';
+import { reportProjectFiles } from '../../engine/engine.ts';
+import { ANNOTATE_WARNING } from '../constants/annotate-warning.ts';
+import { getPluginEnabledProjects } from '../ops/getPluginEnabledProjects.ts';
+import { insertSingleLineCommentAtPositions } from '../utils/insertSingleLineCommentsAtPositions.ts';
 
-const annotateDiagnostics = (source: string, diagnostics: readonly ts.Diagnostic[]): string => {
+const annotateDiagnostics = (source: string, diagnostics: readonly { pos: number }[]): string => {
   return insertSingleLineCommentAtPositions(
     source,
     DIRECTIVE,
-    diagnostics
-      .map(diagnostic => diagnostic.start)
-      // filter last because of how typescript works :(
-      .filter(s => s !== undefined),
+    diagnostics.map(diagnostic => diagnostic.pos),
   );
 };
 
@@ -24,16 +19,7 @@ if (import.meta.vitest) {
   const { describe, it, expect } = import.meta.vitest;
 
   describe('annotateDiagnostics', async () => {
-    const ts = await import('typescript/lib/tsserverlibrary');
-
-    const createDiagnosticAtPosition = (pos: number): ts.Diagnostic => ({
-      start: pos,
-      category: ts.DiagnosticCategory.Warning,
-      code: 0,
-      file: undefined,
-      length: undefined,
-      messageText: '',
-    });
+    const createDiagnosticAtPosition = (pos: number) => ({ pos });
 
     it('should add @ts-migrating before the first line', () => {
       expect(
@@ -304,7 +290,7 @@ f();
         `);
       });
 
-      it('should add @ts-migrating correctly for else if', () => {
+      it('should add @ts-migrating correctly for else if on its own line', () => {
         const code = `if (a) {
 f();
 }
@@ -505,34 +491,46 @@ else if (b) {
 }
 
 export const annotate = async ({ verbose }: { verbose: boolean }, ...inputPaths: string[]) => {
-  const files = getPluginEnabledTSFilePaths(inputPaths, { verbose });
+  const api = new API({ cwd: process.cwd() });
+  try {
+    const projects = getPluginEnabledProjects(api, inputPaths, { verbose });
 
-  console.log(ANNOTATE_WARNING);
+    console.log(ANNOTATE_WARNING);
 
-  console.log('⏳ Gathering errors introduced in your new tsconfig. This may take a while...');
+    console.log('⏳ Gathering errors introduced in your new tsconfig. This may take a while...');
 
-  console.time('Type checking');
-  const filePathAndPluginDiagnostics = files.map(filePath => ({
-    filePath,
-    diagnostics: getSemanticDiagnosticsForFile(filePath).filter(
-      d => isPluginDiagnostic(d) && d.code !== UNUSED_DIRECTIVE_DIAGNOSTIC_CODE,
-    ),
-  }));
-  console.timeEnd('Type checking');
+    console.time('Type checking');
+    const filePathAndDiagnostics = [...projects].flatMap(([tsconfigPath, fileNames]) =>
+      [...reportProjectFiles(api, tsconfigPath, fileNames)].map(({ fileName, entries }) => ({
+        filePath: fileName,
+        diagnostics: entries
+          .filter(
+            ({ origin, markedWithTsMigratingDirective, diagnostic }) =>
+              origin === 'ts-migrating' &&
+              !markedWithTsMigratingDirective &&
+              diagnostic.code !== UNUSED_DIRECTIVE_DIAGNOSTIC_CODE,
+          )
+          .map(({ diagnostic }) => diagnostic),
+      })),
+    );
+    console.timeEnd('Type checking');
 
-  console.time('Annotation');
-  await Promise.all(
-    filePathAndPluginDiagnostics.map(async ({ filePath, diagnostics }) => {
-      await fs.writeFile(
-        filePath,
-        annotateDiagnostics(await fs.readFile(filePath, 'utf8'), diagnostics),
-      );
-      console.log(
-        `✅ Annotated ${filePath} (${diagnostics.length} directive${diagnostics.length === 1 ? '' : 's'} added)`,
-      );
-    }),
-  );
-  console.timeEnd('Annotation');
+    console.time('Annotation');
+    await Promise.all(
+      filePathAndDiagnostics.map(async ({ filePath, diagnostics }) => {
+        await fs.writeFile(
+          filePath,
+          annotateDiagnostics(await fs.readFile(filePath, 'utf8'), diagnostics),
+        );
+        console.log(
+          `✅ Annotated ${filePath} (${diagnostics.length} directive${diagnostics.length === 1 ? '' : 's'} added)`,
+        );
+      }),
+    );
+    console.timeEnd('Annotation');
+  } finally {
+    api.close();
+  }
 
   console.log(
     '✨ Annotation complete! Remember to run your formatter / linter, and potentially this command again to fully annotate all errors.',

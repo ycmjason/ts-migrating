@@ -1,4 +1,3 @@
-import { spawnSync } from 'node:child_process';
 import process from 'node:process';
 
 const FLAG = '--max-old-space-size';
@@ -30,31 +29,20 @@ export const extractMaxOldSpaceSize = (
 };
 
 /**
- * `ts-migrating check`/`annotate` type-check the whole project, which can run
- * past node's default heap on large repos. node's `--max-old-space-size` can't
- * be changed once the process is running (`v8.setFlagsFromString` is ignored
- * for it), so when it's passed to our CLI we re-exec node with it — exactly as
- * if you had run `node --max-old-space-size=<n> …`. See
- * https://github.com/ycmjason/ts-migrating/issues/16
+ * 1.x re-exec'd node with `--max-old-space-size` because type-checking ran in
+ * node's heap. In 2.x it runs in TypeScript 7's native process, so the flag has
+ * no effect; it's still accepted (so existing scripts keep working) with a
+ * warning.
  *
- * Returns the args the CLI should go on to parse (the flag removed). When the
- * flag is present this re-execs and never returns; it only returns if there's
- * nothing to do, or if spawning failed and we fall back to running in-process.
+ * Returns the args the CLI should go on to parse (the flag removed).
  */
 export const applyMaxOldSpaceSize = (): string[] => {
   const { sizeMB, rest } = extractMaxOldSpaceSize(process.argv.slice(2));
-  const scriptPath = process.argv[1];
-  if (sizeMB === undefined || scriptPath === undefined) return rest;
-
-  const result = spawnSync(
-    process.execPath,
-    [...process.execArgv, `${FLAG}=${sizeMB}`, scriptPath, ...rest],
-    { stdio: 'inherit' },
-  );
-
-  // Forward the re-exec'd process's exit code. If we couldn't spawn for some
-  // reason, fall back to running in-process (without the larger heap).
-  if (!result.error) process.exit(result.status ?? 1);
+  if (sizeMB !== undefined) {
+    console.warn(
+      `⚠️ ${FLAG} has no effect in ts-migrating 2.x: type-checking now runs in TypeScript's native process. You can remove it.`,
+    );
+  }
   return rest;
 };
 

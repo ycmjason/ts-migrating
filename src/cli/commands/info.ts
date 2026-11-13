@@ -1,7 +1,9 @@
-import ts from 'typescript/lib/tsserverlibrary';
-import packageJson from '../../../package.json' with { type: 'json' };
-import { getTSInfoForFile } from '../../api/mod';
-import { expandTSFilePaths } from '../expandTSFilePaths';
+import { createRequire } from 'node:module';
+import { version as typescriptVersion } from 'typescript';
+import { API } from 'typescript/sync';
+import { getFileProjectInfos } from '../../engine/engine.ts';
+import { packageJson } from '../../packageJson.ts';
+import { expandFilePaths } from '../expandFilePaths.ts';
 
 export const info = (_flags: unknown, ...pathsOrGlobs: string[]) => {
   console.log('System information:');
@@ -13,8 +15,8 @@ export const info = (_flags: unknown, ...pathsOrGlobs: string[]) => {
           version: packageJson.version,
         },
         TypeScript: {
-          path: require.resolve('typescript'),
-          version: ts.version,
+          path: createRequire(import.meta.url).resolve('typescript'),
+          version: typescriptVersion,
         },
         nodejs: {
           version: process.version,
@@ -26,9 +28,17 @@ export const info = (_flags: unknown, ...pathsOrGlobs: string[]) => {
   );
   console.log();
 
-  for (const filePath of expandTSFilePaths(pathsOrGlobs)) {
-    console.log(`Info about "${filePath}":`);
-    console.log(getTSInfoForFile(filePath));
-    console.log();
+  const fileNames = expandFilePaths(pathsOrGlobs);
+  if (fileNames.length <= 0) return;
+
+  const api = new API({ cwd: process.cwd() });
+  try {
+    for (const { fileName, tsconfigPath, pluginEnabled } of getFileProjectInfos(api, fileNames)) {
+      console.log(`Info about "${fileName}":`);
+      console.log({ tsconfigPath: tsconfigPath ?? '[not found]', pluginEnabled });
+      console.log();
+    }
+  } finally {
+    api.close();
   }
 };

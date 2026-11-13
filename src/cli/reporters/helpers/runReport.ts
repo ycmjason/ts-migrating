@@ -1,6 +1,7 @@
-import { getTsMigratingReportForFile } from '../../../api/getTsMigratingReportForFile';
-import type { TsMigratingReportEntry } from '../../../api/mod';
-import { getPluginEnabledTSFilePaths } from '../../ops/getPluginEnabledTSFilePaths';
+import { API } from 'typescript/sync';
+import { reportProjectFiles } from '../../../engine/engine.ts';
+import type { TsMigratingReportEntry } from '../../../engine/types.ts';
+import { getPluginEnabledProjects } from '../../ops/getPluginEnabledProjects.ts';
 
 export type ReportTally = {
   /** Unmarked `ts-migrating` errors (incl. unused directives) — what fails the check. */
@@ -28,20 +29,24 @@ export const runReport = (
   const tally: ReportTally = { unmarkedTsMigratingErrorCount: 0, baselineErrorCount: 0 };
 
   function* entries(): Generator<TsMigratingReportEntry> {
-    const pluginEnabledFiles = getPluginEnabledTSFilePaths(inputPaths, {
-      verbose,
-      log: console.error,
-    });
+    const api = new API({ cwd: process.cwd() });
+    try {
+      const projects = getPluginEnabledProjects(api, inputPaths, { verbose, log: console.error });
 
-    for (const file of pluginEnabledFiles) {
-      for (const entry of getTsMigratingReportForFile(file)) {
-        if (entry.origin === 'baseline') {
-          tally.baselineErrorCount += 1;
-        } else if (!entry.markedWithTsMigratingDirective) {
-          tally.unmarkedTsMigratingErrorCount += 1;
+      for (const [tsconfigPath, fileNames] of projects) {
+        for (const report of reportProjectFiles(api, tsconfigPath, fileNames)) {
+          for (const entry of report.entries) {
+            if (entry.origin === 'baseline') {
+              tally.baselineErrorCount += 1;
+            } else if (!entry.markedWithTsMigratingDirective) {
+              tally.unmarkedTsMigratingErrorCount += 1;
+            }
+            yield entry;
+          }
         }
-        yield entry;
       }
+    } finally {
+      api.close();
     }
   }
 
