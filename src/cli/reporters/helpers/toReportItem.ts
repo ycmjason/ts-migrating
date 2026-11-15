@@ -1,5 +1,5 @@
 import path from 'node:path';
-import ts from 'typescript/lib/tsserverlibrary';
+import ts from 'typescript/lib/tsserverlibrary.js';
 import type { DiagnosticOrigin, TsMigratingReportEntry } from '../../../api/mod';
 
 /** 1-based line/column, mirroring `tsc`/editor gutters (not LSP's 0-based). */

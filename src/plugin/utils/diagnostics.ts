@@ -1,4 +1,4 @@
-import ts from 'typescript/lib/tsserverlibrary';
+import ts from 'typescript/lib/tsserverlibrary.js';
 import { PLUGIN_DIAGNOSTIC_TAG } from '../constants/PLUGIN_DIAGNOSTIC_TAG';
 
 const serializeDiagnosticMessageText = (

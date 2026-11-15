@@ -1,6 +1,6 @@
 /** biome-ignore-all lint/suspicious/noTemplateCurlyInString: need to store template curly */
 import fs from 'node:fs/promises';
-import type ts from 'typescript/lib/tsserverlibrary';
+import type ts from 'typescript/lib/tsserverlibrary.js';
 import { getSemanticDiagnosticsForFile } from '../../api/getSemanticDiagnostics';
 import { insertSingleLineCommentAtPositions } from '../../api/insertSingleLineCommentsAtPositions';
 import { isPluginDiagnostic } from '../../api/isPluginDiagnostic';
@@ -24,7 +24,7 @@ if (import.meta.vitest) {
   const { describe, it, expect } = import.meta.vitest;
 
   describe('annotateDiagnostics', async () => {
-    const ts = await import('typescript/lib/tsserverlibrary');
+    const ts = await import('typescript/lib/tsserverlibrary.js');
 
     const createDiagnosticAtPosition = (pos: number): ts.Diagnostic => ({
       start: pos,

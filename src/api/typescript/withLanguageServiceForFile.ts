@@ -1,5 +1,5 @@
 import path from 'node:path';
-import ts from 'typescript/lib/tsserverlibrary';
+import ts from 'typescript/lib/tsserverlibrary.js';
 import type { TsMigratingLanguageService } from '../../plugin/createTsMigratingProxyLanguageService';
 import { isPluginEnabled } from '../getTSInfoForFile';
 import { projectService } from './projectService';

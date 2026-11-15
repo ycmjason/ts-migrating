@@ -3,7 +3,7 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { describe } from 'node:test';
-import ts from 'typescript/lib/tsserverlibrary';
+import ts from 'typescript/lib/tsserverlibrary.js';
 import { afterAll, expect, it } from 'vitest';
 import { getSemanticDiagnosticsForFile } from './getSemanticDiagnostics';
 import { isPluginDiagnostic } from './isPluginDiagnostic';
