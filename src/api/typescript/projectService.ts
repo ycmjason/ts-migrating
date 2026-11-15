@@ -1,4 +1,4 @@
-import ts from 'typescript/lib/tsserverlibrary';
+import ts from 'typescript/lib/tsserverlibrary.js';
 
 export const projectService = new ts.server.ProjectService({
   host: {

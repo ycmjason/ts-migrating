@@ -1,5 +1,5 @@
 import * as recast from 'recast';
-import * as babelTsParser from 'recast/parsers/babel-ts';
+import * as babelTsParser from 'recast/parsers/babel-ts.js';
 import { expect } from 'vitest';
 import { maxBy } from './utils/maxBy';
 
@@ -47,7 +47,7 @@ if (import.meta.vitest) {
   const { it, describe } = import.meta.vitest;
 
   describe('getAbsolutePosition / getLineColumnPosition', async () => {
-    const ts = await import('typescript/lib/tsserverlibrary');
+    const ts = await import('typescript/lib/tsserverlibrary.js');
 
     it('should return the absolute position and back', () => {
       const code = `const a = 'hi'

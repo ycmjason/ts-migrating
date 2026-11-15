@@ -1,4 +1,4 @@
-import type ts from 'typescript/lib/tsserverlibrary';
+import type ts from 'typescript/lib/tsserverlibrary.js';
 import { unbrandDiagnostic } from '../plugin/utils/diagnostics';
 import { isPluginDiagnostic } from './isPluginDiagnostic';
 import { withLanguageServiceForFile } from './typescript/withLanguageServiceForFile';

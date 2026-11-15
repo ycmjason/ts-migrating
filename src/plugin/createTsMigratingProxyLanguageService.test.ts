@@ -1,4 +1,4 @@
-import ts from 'typescript/lib/tsserverlibrary';
+import ts from 'typescript/lib/tsserverlibrary.js';
 import { describe, expect, it, vi } from 'vitest';
 import { isPluginDiagnostic } from '../api/isPluginDiagnostic';
 import { DIRECTIVE } from './constants/DIRECTIVE';

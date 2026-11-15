@@ -1,5 +1,5 @@
 import path from 'node:path';
-import ts from 'typescript/lib/tsserverlibrary';
+import ts from 'typescript/lib/tsserverlibrary.js';
 import { getPluginsFromCompilerOptions } from './typescript/getPluginsFromCompilerOptions';
 import { projectService } from './typescript/projectService';
 
