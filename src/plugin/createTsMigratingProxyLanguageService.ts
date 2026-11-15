@@ -1,4 +1,4 @@
-import type TsServerLibrary from 'typescript/lib/tsserverlibrary';
+import type TsServerLibrary from 'typescript/lib/tsserverlibrary.js';
 import { DIRECTIVE } from './constants/DIRECTIVE';
 import { UNUSED_DIRECTIVE_DIAGNOSTIC_CODE } from './constants/UNUSED_DIRECTIVE_DIAGNOSTIC_CODE';
 import { createOverwritingProxy } from './createOverwritingProxy';

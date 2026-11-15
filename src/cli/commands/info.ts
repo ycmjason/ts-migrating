@@ -1,4 +1,4 @@
-import ts from 'typescript/lib/tsserverlibrary';
+import ts from 'typescript/lib/tsserverlibrary.js';
 import packageJson from '../../../package.json' with { type: 'json' };
 import { getTSInfoForFile } from '../../api/mod';
 import { expandTSFilePaths } from '../expandTSFilePaths';
