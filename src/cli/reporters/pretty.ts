@@ -1,5 +1,5 @@
 import process from 'node:process';
-import ts from 'typescript/lib/tsserverlibrary';
+import ts from 'typescript/lib/tsserverlibrary.js';
 import { brandifyDiagnostic } from '../../plugin/utils/diagnostics';
 import { type ReportTally, runReport } from './helpers/runReport';
 

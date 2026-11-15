@@ -1,4 +1,4 @@
-import type ts from 'typescript/lib/tsserverlibrary';
+import type ts from 'typescript/lib/tsserverlibrary.js';
 import { PLUGIN_DIAGNOSTIC_TAG } from '../plugin/constants/PLUGIN_DIAGNOSTIC_TAG';
 
 export const isPluginDiagnostic = (diagnostic: ts.Diagnostic): boolean => {
